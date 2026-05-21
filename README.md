@@ -162,6 +162,12 @@ Production environments redact role names and target details by default — opt-
 | `cache.decision_store`               | Decision cache backend (`request` by default).                                                           |
 | `register_octane_reset_listener`     | Reset scoped state at Octane worker boundaries.                                                          |
 
+## 🔁 Migrating from `spatie/laravel-permission`
+
+Coming from `spatie/laravel-permission`? See the dedicated guide for schema, API,
+and multi-tenancy differences plus a copy-pasteable data-migration script:
+[docs/migration-from-spatie-laravel-permission.md](docs/migration-from-spatie-laravel-permission.md).
+
 ## 🧪 Testing
 
 ```bash
