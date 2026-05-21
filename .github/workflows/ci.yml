@@ -215,6 +215,7 @@ jobs:
           fail_ci_if_error: false
           flags: pest
           name: codecov-pest
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   lint:
     name: Pint
