@@ -121,6 +121,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Optional Console Commands
+    |--------------------------------------------------------------------------
+    |
+    | PBAC ships a few opt-in maintenance commands that are not registered by
+    | default. Flip the relevant flag (typically via an environment variable)
+    | for a single deployment when you need the command, then turn it back
+    | off. Commands that are not registered do not appear in [php artisan
+    | list] and cannot be invoked.
+    |
+    */
+
+    'commands' => [
+        'migrate_from_spatie' => env('PBAC_ENABLE_SPATIE_MIGRATION_COMMAND', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Gate Integration
     |--------------------------------------------------------------------------
     |

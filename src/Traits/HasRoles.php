@@ -44,9 +44,18 @@ trait HasRoles
 
     public function assignRole(Role|string|int $role): static
     {
-        $role = $this->resolveRole($role);
+        return $this->assignRoles($role);
+    }
 
-        $this->roles()->syncWithoutDetaching([$role->getKey()]);
+    public function assignRoles(Role|string|int ...$roles): static
+    {
+        if ($roles === []) {
+            return $this;
+        }
+
+        $keys = $this->resolveRoleKeys($roles);
+
+        $this->roles()->syncWithoutDetaching($keys);
         $this->resetPbacDecisionCache();
 
         return $this;
@@ -54,9 +63,33 @@ trait HasRoles
 
     public function removeRole(Role|string|int $role): static
     {
-        $role = $this->resolveRole($role);
+        return $this->removeRoles($role);
+    }
 
-        $this->roles()->detach($role->getKey());
+    public function removeRoles(Role|string|int ...$roles): static
+    {
+        if ($roles === []) {
+            return $this;
+        }
+
+        $keys = $this->resolveRoleKeys($roles);
+
+        $this->roles()->detach($keys);
+        $this->resetPbacDecisionCache();
+
+        return $this;
+    }
+
+    /**
+     * @param  iterable<Role|string|int>  $roles
+     */
+    public function syncRoles(iterable $roles): static
+    {
+        $list = is_array($roles) ? $roles : iterator_to_array($roles, preserve_keys: false);
+
+        $keys = $list === [] ? [] : $this->resolveRoleKeys($list);
+
+        $this->roles()->sync($keys);
         $this->resetPbacDecisionCache();
 
         return $this;
@@ -67,6 +100,21 @@ trait HasRoles
         $role = $this->resolveRole($role);
 
         return $this->roles()->whereKey($role->getKey())->exists();
+    }
+
+    /**
+     * @param  array<Role|string|int>  $roles
+     * @return list<int|string>
+     */
+    private function resolveRoleKeys(array $roles): array
+    {
+        $keys = [];
+
+        foreach ($roles as $role) {
+            $keys[] = $this->resolveRole($role)->getKey();
+        }
+
+        return array_values(array_unique($keys, SORT_REGULAR));
     }
 
     private function resolveRole(Role|string|int $role): Role
