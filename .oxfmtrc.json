@@ -5,5 +5,5 @@
   "useTabs": false,
   "printWidth": 80,
   "trailingComma": "none",
-  "ignorePatterns": ["**/vendor/**", "**/node_modules/**"]
+  "ignorePatterns": ["**/vendor/**", "**/node_modules/**", "CHANGELOG.md"]
 }
