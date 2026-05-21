@@ -54,6 +54,11 @@
   },
   "scripts": {
     "test": "vendor/bin/pest",
+    "test:fast": "vendor/bin/pest --compact --parallel",
+    "test:coverage": [
+      "Composer\\Config::disableProcessTimeout",
+      "@php -d pcov.directory=src vendor/bin/pest --compact --coverage --min=0"
+    ],
     "pint": "vendor/bin/pint --test",
     "pint:fix": "vendor/bin/pint",
     "larastan": "vendor/bin/phpstan analyse --memory-limit=512M"

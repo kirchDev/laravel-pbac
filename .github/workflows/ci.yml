@@ -178,6 +178,44 @@ jobs:
       - name: Run Pest
         run: composer test
 
+  coverage:
+    name: Coverage (PCOV → Codecov)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite3, pdo_sqlite, pcov
+          coverage: pcov
+          ini-values: pcov.directory=src
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-coverage-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-coverage-
+      - name: Install Composer dependencies
+        run: composer update --prefer-dist --no-progress
+      - name: Run Pest with coverage
+        run: vendor/bin/pest --coverage --coverage-clover=coverage.xml --min=0
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+          flags: pest
+          name: codecov-pest
+
   lint:
     name: Pint
     runs-on: ubuntu-latest
