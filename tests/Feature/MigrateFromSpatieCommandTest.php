@@ -62,6 +62,10 @@ function createSpatieFixtureTables(): void
         $table->primary(['permission_id', 'role_id']);
     });
 
+    // Note: real spatie/laravel-permission tables include team_id in the composite
+    // primary key. We drop that here because PostgreSQL refuses NULL in PK columns
+    // while SQLite tolerates it. The migration logic under test is agnostic to the
+    // source-side primary-key shape — only column presence/values matter.
     Schema::create('model_has_roles', function (Blueprint $table) {
         $table->unsignedBigInteger('role_id');
         $table->unsignedBigInteger('team_id')->nullable()->index();
@@ -69,7 +73,7 @@ function createSpatieFixtureTables(): void
         $table->unsignedBigInteger('model_id');
 
         $table->index(['model_id', 'model_type']);
-        $table->primary(['team_id', 'role_id', 'model_id', 'model_type']);
+        $table->unique(['team_id', 'role_id', 'model_id', 'model_type']);
     });
 
     Schema::create('model_has_permissions', function (Blueprint $table) {
@@ -79,7 +83,7 @@ function createSpatieFixtureTables(): void
         $table->unsignedBigInteger('model_id');
 
         $table->index(['model_id', 'model_type']);
-        $table->primary(['team_id', 'permission_id', 'model_id', 'model_type']);
+        $table->unique(['team_id', 'permission_id', 'model_id', 'model_type']);
     });
 }
 
