@@ -110,6 +110,23 @@ Pbac::withoutOrganisation(fn () => $user->can('admin.impersonate'));
 
 The decision cache resets on scope enter/exit, so checks **never bleed across tenants**.
 
+### Assigning global roles when org scoping is enabled
+
+To prevent silent mis-targeting, role **mutations** by name refuse to resolve a global role unless the caller signals intent. Pass `global: true`, or wrap the call in `Pbac::withoutOrganisation()` and assign by `Role` instance:
+
+```php
+$user->assignRole('superadmin', global: true);
+$user->removeRole('superadmin', global: true);
+$user->syncRoles(['superadmin', 'support_lead'], global: true);
+$user->hasRole('superadmin', global: true);
+
+// Equivalent for arbitrary mixed batches:
+$role = Role::findOrCreate('superadmin');
+Pbac::withoutOrganisation(fn () => $user->assignRole($role));
+```
+
+Inside an active organisation scope, `$user->assignRole('owner')` resolves the org-scoped row only — global rows with the same name are deliberately invisible to mutations without the explicit flag.
+
 Bring your own resolver (e.g. backed by a tenancy package or route binding):
 
 ```php

@@ -12,9 +12,9 @@ it('assigns multiple roles in a single call', function () {
     $editor = Role::findOrCreate('editor');
     $reviewer = Role::findOrCreate('reviewer');
 
-    $user->assignRoles($editor, 'reviewer');
+    $user->assignRoles($editor, 'reviewer', global: true);
 
-    expect($user->hasRole('editor'))->toBeTrue()
+    expect($user->hasRole('editor', global: true))->toBeTrue()
         ->and($user->hasRole($reviewer))->toBeTrue();
 });
 
@@ -33,7 +33,7 @@ it('deduplicates role keys when bulk assigning the same role multiple times', fu
 
     $editor = Role::findOrCreate('editor');
 
-    $user->assignRoles($editor, 'editor', $editor->getKey());
+    $user->assignRoles($editor, 'editor', $editor->getKey(), global: true);
 
     expect($user->roles()->count())->toBe(1);
 });
@@ -46,9 +46,9 @@ it('removes multiple roles in a single call', function () {
     $auditor = Role::findOrCreate('auditor');
 
     $user->assignRoles($editor, $reviewer, $auditor);
-    $user->removeRoles('editor', $reviewer);
+    $user->removeRoles('editor', $reviewer, global: true);
 
-    expect($user->hasRole('editor'))->toBeFalse()
+    expect($user->hasRole('editor', global: true))->toBeFalse()
         ->and($user->hasRole($reviewer))->toBeFalse()
         ->and($user->hasRole($auditor))->toBeTrue();
 });
@@ -106,8 +106,8 @@ it('accepts a generator as syncRoles input', function () {
         yield 'reviewer';
     })();
 
-    $user->syncRoles($generator);
+    $user->syncRoles($generator, global: true);
 
-    expect($user->hasRole('editor'))->toBeTrue()
-        ->and($user->hasRole('reviewer'))->toBeTrue();
+    expect($user->hasRole('editor', global: true))->toBeTrue()
+        ->and($user->hasRole('reviewer', global: true))->toBeTrue();
 });
