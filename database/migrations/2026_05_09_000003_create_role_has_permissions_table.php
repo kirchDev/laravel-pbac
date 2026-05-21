@@ -24,6 +24,11 @@ return new class extends Migration
             $table->string('target_type')->nullable();
             $this->addKeyColumn($table, $targetMorphKey, $targetMorphKeyType, nullable: true);
 
+            // Cascade on delete is intentional: a grant only makes sense while both
+            // its permission and its role exist. Deleting either should erase the
+            // grant rows so the index stays consistent — host apps that need an
+            // audit trail of historical grants must capture that *before* deletion
+            // (events on the Role/Permission models are the recommended hook).
             $table->foreign($permissionPivot)
                 ->references('id')
                 ->on($tableNames['permissions'])

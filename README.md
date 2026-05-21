@@ -192,6 +192,18 @@ Pbac::withUnredactedTrace(function () use ($user, $post) {
 });
 ```
 
+## 🧹 Cascade behaviour on delete
+
+Foreign keys are deliberately set to `ON DELETE CASCADE` so the indexes never carry stale grants or assignments. Mark this on your operational checklist:
+
+| When you delete…               | These rows go away automatically                                            |
+| :----------------------------- | :-------------------------------------------------------------------------- |
+| A `Role`                       | All `role_has_permissions` rows for that role + all `model_has_roles` rows. |
+| A `Permission`                 | All `role_has_permissions` rows referencing it.                             |
+| A host model (e.g. `User`) row | **Not** automatic. `model_has_roles` rows on the morph side are orphaned.   |
+
+The host-model side is polymorphic (`model_type` + `model_id`), so no FK enforces it. Hook your model's `deleting`/`deleted` events or run a periodic prune job if user/team deletions are part of your normal flow. If you need an audit trail of historical grants/assignments, capture it **before** deletion — once the cascade fires, the rows are gone.
+
 ## ⚙️ Configuration highlights
 
 `config/pbac.php` is heavily parameterised — see the file for inline docs. Most common knobs:

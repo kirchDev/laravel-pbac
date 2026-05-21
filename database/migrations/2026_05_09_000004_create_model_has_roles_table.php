@@ -21,6 +21,11 @@ return new class extends Migration
             $table->string('model_type');
             $this->addKeyColumn($table, $modelMorphKey, $modelMorphKeyType);
 
+            // Cascade on delete is intentional: an assignment only makes sense while
+            // its role exists. Note there is no FK on (model_type, model_id) — that
+            // side is polymorphic, so cleanup when a host model (e.g. User) is
+            // deleted is the application's responsibility. Hook into the model's
+            // deleting/deleted events or run a periodic prune job.
             $table->foreign($rolePivot)
                 ->references('id')
                 ->on($tableNames['roles'])
