@@ -207,6 +207,27 @@ You should see four new `pbac_*` tables alongside the Spatie tables.
 The package ships an Artisan command that handles the data move idempotently.
 It runs as a dry-run by default — pass `--commit` to actually write.
 
+> [!NOTE]
+> The command is **opt-in** and not registered by default — it will not show
+> up in `php artisan list` until you enable it. Flip the config flag (ideally
+> via env) for the deployment that performs the migration, then turn it back
+> off:
+>
+> ```dotenv
+> # .env
+> PBAC_ENABLE_SPATIE_MIGRATION_COMMAND=true
+> ```
+>
+> Or directly in `config/pbac.php`:
+>
+> ```php
+> 'commands' => [
+>     'migrate_from_spatie' => true,
+> ],
+> ```
+>
+> Remember to `php artisan config:clear` if you have cached config.
+
 ```bash
 # Dry-run: validates tables, reports row counts, rolls back at the end.
 php artisan pbac:migrate-from-spatie --with-teams

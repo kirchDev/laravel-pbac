@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use KirchDev\Pbac\Console\MigrateFromSpatieCommand;
 
 beforeEach(function () {
     // Move the PBAC tables aside so the source defaults (`roles`, `permissions`, …) are free for Spatie fixtures.
@@ -14,6 +16,12 @@ beforeEach(function () {
         'role_has_permissions' => 'pbac_role_has_permissions',
         'model_has_roles' => 'pbac_model_has_roles',
     ]);
+
+    // The command is gated behind config('pbac.commands.migrate_from_spatie'). The package
+    // service provider has already booted by this point, so register the command directly
+    // here to simulate an environment where the flag was on at boot time.
+    config()->set('pbac.commands.migrate_from_spatie', true);
+    Artisan::registerCommand(app(MigrateFromSpatieCommand::class));
 
     // Rerun the package migrations under the renamed targets.
     Schema::dropIfExists('model_has_roles');

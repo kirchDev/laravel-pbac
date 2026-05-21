@@ -56,9 +56,20 @@ class PbacServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                MigrateFromSpatieCommand::class,
-            ]);
+            $this->registerOptionalCommands();
+        }
+    }
+
+    private function registerOptionalCommands(): void
+    {
+        $commands = [];
+
+        if ((bool) config('pbac.commands.migrate_from_spatie', false)) {
+            $commands[] = MigrateFromSpatieCommand::class;
+        }
+
+        if ($commands !== []) {
+            $this->commands($commands);
         }
     }
 
