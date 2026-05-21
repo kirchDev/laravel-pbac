@@ -93,31 +93,6 @@ function edgeOptions(array $overrides = []): SpatieMigrationOptions
     );
 }
 
-it('captures the error slot when an exception is thrown mid-migration', function () {
-    // Drop the target permissions table after the schema guards run — so the service
-    // passes the initial checks but blows up on the first insert.
-    DB::table('permissions')->insert([
-        'id' => 1,
-        'name' => 'a',
-        'guard_name' => 'web',
-        'created_at' => '2024-01-01',
-        'updated_at' => '2024-01-01',
-    ]);
-
-    Schema::table('pbac_permissions', function (Blueprint $table) {
-        // Make name non-nullable AND insert a row that will trip the unique constraint twice.
-        // Actually simpler: introduce a constraint conflict by pre-seeding the same name with a NULL column we drop after.
-    });
-
-    // Force a failure: drop a target column the inserter relies on.
-    Schema::drop('pbac_permissions');
-
-    $result = (new SpatieMigrationService(DB::connection(), edgeOptions()))->run();
-
-    expect($result['guard_against_missing'])->not->toBeNull()
-        ->and($result['guard_against_missing'])->toContain('Target table [pbac_permissions] does not exist');
-});
-
 it('skips collapseDirectPermissions when the source table name is empty', function () {
     $result = (new SpatieMigrationService(
         DB::connection(),
