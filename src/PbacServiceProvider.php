@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use KirchDev\Pbac\Authorization\DecisionCache;
 use KirchDev\Pbac\Authorization\PbacAuthorizer;
+use KirchDev\Pbac\Console\MigrateFromSpatieCommand;
 use KirchDev\Pbac\Contracts\Authorizer;
 use KirchDev\Pbac\Contracts\OrganisationResolver;
 use KirchDev\Pbac\Gate\PbacGate;
@@ -52,6 +53,12 @@ class PbacServiceProvider extends ServiceProvider
 
         if ((bool) config('pbac.register_octane_reset_listener', false)) {
             $this->registerOctaneResetListeners();
+        }
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                MigrateFromSpatieCommand::class,
+            ]);
         }
     }
 

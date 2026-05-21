@@ -11,11 +11,14 @@ swap is **not** safe. Read the [Conceptual differences](#conceptual-differences)
 section before touching code.
 
 > [!IMPORTANT]
-> `laravel-pbac` is **role-based only**. Permissions are granted to roles, not
-> directly to users. If your app relies on `User::givePermissionTo()` /
-> `User::hasDirectPermission()`, you must model those as single-user roles
-> (typically a `user:{id}` role) before migrating. See
-> [Direct user permissions](#direct-user-permissions).
+> `laravel-pbac` is still a PBAC implementation — abilities flow through
+> Laravel's `Gate`, permissions can be target-bound, and decisions are
+> traceable. What differs from Spatie is the **assignment model**: every
+> permission is granted to a *role*, and users receive permissions only by
+> being assigned a role. There is no `User::givePermissionTo()` /
+> `User::hasDirectPermission()` equivalent. If your Spatie setup uses direct
+> grants, model them as single-user roles (typically `user:{id}`) before the
+> cutover. See [Direct user permissions](#direct-user-permissions).
 
 ---
 
@@ -185,9 +188,67 @@ You should see four new `pbac_*` tables alongside the Spatie tables.
 
 ## Step 3 — Migrate the database
 
-Copy data from the Spatie tables to the PBAC tables. The schemas are similar
-enough that a single migration class handles the common case. The example below
-assumes:
+The package ships an Artisan command that handles the data move idempotently.
+It runs as a dry-run by default — pass `--commit` to actually write.
+
+```bash
+# Dry-run: validates tables, reports row counts, rolls back at the end.
+php artisan pbac:migrate-from-spatie --with-teams
+
+# Persist: same flags + --commit.
+php artisan pbac:migrate-from-spatie --with-teams --commit
+
+# Multi-guard setup: prefix abilities with their guard so the guard-less
+# PBAC schema doesn't collapse rows with the same name.
+php artisan pbac:migrate-from-spatie --guard-prefix --commit
+
+# Single guard only.
+php artisan pbac:migrate-from-spatie --guard=web --commit
+
+# Carry direct user permissions over as per-user roles ("user:{id}").
+php artisan pbac:migrate-from-spatie \
+    --with-teams \
+    --collapse-direct-permissions \
+    --commit
+```
+
+All option defaults match Spatie's default schema. Override per flag if your
+installation diverges:
+
+| Flag                              | Default                | Purpose                                                            |
+| :-------------------------------- | :--------------------- | :----------------------------------------------------------------- |
+| `--connection=<name>`             | app default            | DB connection to read/write on                                     |
+| `--roles=<table>`                 | `roles`                | Source Spatie roles table                                          |
+| `--permissions=<table>`           | `permissions`          | Source Spatie permissions table                                    |
+| `--role-permissions=<table>`      | `role_has_permissions` | Source pivot                                                       |
+| `--model-roles=<table>`           | `model_has_roles`      | Source role assignments                                            |
+| `--model-permissions=<table>`     | `model_has_permissions`| Source direct grants (empty string disables)                       |
+| `--team-column=<column>`          | `team_id`              | Spatie's team column                                               |
+| `--guard=<name>`                  | _all guards_           | Filter source rows by `guard_name`                                 |
+| `--guard-prefix`                  | off                    | Prefix ability and role names with `<guard>:`                      |
+| `--with-teams`                    | off                    | Carry `team_id` over as `organisation_id` on PBAC roles            |
+| `--collapse-direct-permissions`   | off                    | Materialise `model_has_permissions` as `user:{id}` roles           |
+| `--commit`                        | off                    | Persist changes. Without it the command runs inside a rolled-back transaction. |
+
+The command writes against the **PBAC table names from your config**, so make
+sure you have already renamed them as described in [Step 2](#step-2--reconcile-config)
+before running it — otherwise it will refuse to run.
+
+### When to hand-roll the migration
+
+The shipped command covers the common case. Write a custom migration class
+instead if you need:
+
+- A bespoke `team_id` → `organisation_id` lookup (e.g. a join through a tenant
+  mapping table).
+- A custom ability-name transform beyond `--guard-prefix` (e.g. renaming
+  `posts.update` to `post.update`).
+- A non-standard target morph mapping (PBAC writes `target_type = null`,
+  `target_id = null` for all migrated grants — Spatie has no target dimension).
+
+A template you can adapt — the long-form equivalent of the Artisan command,
+reach for it only when one of the bullet points above applies. The example
+below assumes:
 
 - Spatie default tables (`roles`, `permissions`, `model_has_roles`, `role_has_permissions`, `model_has_permissions`).
 - PBAC tables renamed to `pbac_*` per [Step 2](#step-2--reconcile-config).
@@ -365,9 +426,9 @@ Replace the trait import on every authorizable model:
 | Create a role for a tenant     | `Role::create(['name' => 'editor', 'team_id' => 1])`| `Role::create(['name' => 'editor', 'organisation_id' => 1])`        |
 | Create a permission            | `Permission::create(['name' => 'posts.update'])`    | `Permission::create(['name' => 'posts.update'])`                    |
 | Find or create                 | `Role::findOrCreate('editor', $guard)`              | `Role::findOrCreate('editor', $organisationId)`                     |
-| Assign role to user            | `$user->assignRole($role)` / `$user->assignRole('a','b')` | `$user->assignRole($role)` — **one role per call**            |
-| Remove role from user          | `$user->removeRole($role)`                          | `$user->removeRole($role)`                                          |
-| Sync roles                     | `$user->syncRoles(['a', 'b'])`                      | Not available — loop `assignRole` / `removeRole`                    |
+| Assign role to user            | `$user->assignRole($role)` / `$user->assignRole('a','b')` | `$user->assignRole($role)` / `$user->assignRoles('a', 'b')`         |
+| Remove role from user          | `$user->removeRole($role)`                          | `$user->removeRole($role)` / `$user->removeRoles('a', 'b')`         |
+| Sync roles                     | `$user->syncRoles(['a', 'b'])`                      | `$user->syncRoles(['a', 'b'])`                                      |
 | Check role                     | `$user->hasRole('editor')`                          | `$user->hasRole('editor')`                                          |
 | Grant permission to role       | `$role->givePermissionTo('posts.update')`           | `$role->givePermissionTo('posts.update')`                           |
 | Target-scoped grant            | _(not first-class)_                                 | `$role->givePermissionTo('posts.update', $post)`                    |
@@ -376,14 +437,10 @@ Replace the trait import on every authorizable model:
 | Direct user permission         | `$user->givePermissionTo('foo')`                    | _(use a per-user role; see Step 3)_                                 |
 
 > [!NOTE]
-> `assignRole()` in PBAC takes a single role (Role instance, string, or int id).
-> Spatie's variadic form has no direct equivalent — wrap it:
->
-> ```php
-> foreach (['editor', 'reviewer'] as $name) {
->     $user->assignRole($name);
-> }
-> ```
+> `assignRoles()` / `removeRoles()` are variadic and accept any mix of
+> `Role`, `string`, and `int` arguments. `syncRoles()` accepts any iterable
+> (array, generator, Collection). All three reset the decision cache once at
+> the end, so they're safe to use in bulk paths.
 
 ### Lookups that don't return identical types
 
@@ -622,7 +679,10 @@ $role->hasPermissionTo($perm, $post);
 
 // Assignments
 $user->assignRole($role);                    // accepts Role | string | int
+$user->assignRoles($a, 'editor', 42);        // variadic bulk
 $user->removeRole($role);
+$user->removeRoles($a, 'editor');            // variadic bulk
+$user->syncRoles(['editor', 'reviewer']);    // iterable; replaces the active set
 $user->hasRole('editor');
 $user->permissionNames();                    // array<string>
 
