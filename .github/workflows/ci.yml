@@ -84,7 +84,7 @@ jobs:
         run: pnpm check
 
   test:
-    name: Pest (PHP ${{ matrix.php }}, Laravel ${{ matrix.laravel }})
+    name: Pest (PHP ${{ matrix.php }}, Laravel ${{ matrix.laravel }}, ${{ matrix.dependencies }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -93,6 +93,7 @@ jobs:
       matrix:
         php: ['8.4', '8.5']
         laravel: ['13.*']
+        dependencies: [highest, lowest]
 
     steps:
       - uses: actions/checkout@v6
@@ -108,9 +109,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.composer/cache/files
-          key: ${{ runner.os }}-composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ hashFiles('composer.json') }}
+          key: ${{ runner.os }}-composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.dependencies }}-${{ hashFiles('composer.json') }}
           restore-keys: |
-            ${{ runner.os }}-composer-${{ matrix.php }}-${{ matrix.laravel }}-
+            ${{ runner.os }}-composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.dependencies }}-
       - name: Pin Laravel version
         run: |
           composer require \
@@ -121,7 +122,9 @@ jobs:
             "illuminate/support:${{ matrix.laravel }}" \
             --no-update --no-interaction
       - name: Install Composer dependencies
-        run: composer update --prefer-dist --no-progress
+        run: |
+          composer update --prefer-dist --no-progress \
+            ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
       - name: Run Pest
         run: composer test
 
