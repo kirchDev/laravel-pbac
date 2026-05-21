@@ -207,7 +207,7 @@ jobs:
       - name: Install Composer dependencies
         run: composer update --prefer-dist --no-progress
       - name: Run Pest with coverage
-        run: vendor/bin/pest --coverage --coverage-clover=coverage.xml --min=0
+        run: vendor/bin/pest --coverage --coverage-clover=coverage.xml --min=90
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
