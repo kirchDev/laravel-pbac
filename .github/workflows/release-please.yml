@@ -16,7 +16,22 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # release-please opens a release PR from a `release-please--…` branch and
+      # leaves it dangling after merge. Clean those up locally instead of
+      # enabling the repo-wide "Auto-delete head branches" toggle (which would
+      # also wipe long-lived branches like `dev`).
+      - name: Delete merged release-please branches
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for branch in $(gh api "repos/${{ github.repository }}/branches" --paginate --jq '.[].name' | grep '^release-please--' || true); do
+            echo "Deleting $branch"
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$branch" || true
+          done
