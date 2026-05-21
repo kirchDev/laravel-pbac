@@ -1,20 +1,38 @@
-# laravel-pbac
+<div align="center">
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/kirchdev/laravel-pbac.svg?style=flat-square)](https://packagist.org/packages/kirchdev/laravel-pbac)
-[![Tests](https://github.com/kirchDev/laravel-pbac/actions/workflows/ci.yml/badge.svg)](https://github.com/kirchDev/laravel-pbac/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+# 🛡️ laravel-pbac
 
-Policy-based access control for Laravel: roles, permissions, optional organisation-scoped authorization, native `Gate` integration, and a request-scoped decision cache.
+**Policy-based access control for Laravel — roles, permissions, multi-tenant scoping, decision tracing, and native `Gate` integration.**
 
-- **Roles and permissions** as plain Eloquent models you can swap out.
-- **Multi-tenant ready.** Bind roles to an organisation (or any "tenant") with a pluggable resolver, or run global.
-- **`Gate::before` integration.** `$user->can('ability')`, `Gate::allows(...)`, and `Gate::inspect(...)` Just Work — abilities resolve through PBAC and fall back to Laravel gates.
-- **Decision cache.** Per-request memoization so repeated checks in a single request are cheap.
-- **Decision trace.** Opt-in trace of how a decision was reached, redacted in production by default.
-- **Octane-aware.** Optional listeners reset scoped state on `RequestTerminated`, `TaskTerminated`, and `TickTerminated`.
-- **PHP 8.4 + Laravel 13.**
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/kirchdev/laravel-pbac.svg?style=flat-square&color=4f46e5)](https://packagist.org/packages/kirchdev/laravel-pbac)
+[![Total Downloads](https://img.shields.io/packagist/dt/kirchdev/laravel-pbac.svg?style=flat-square&color=4f46e5)](https://packagist.org/packages/kirchdev/laravel-pbac)
+[![Tests](https://img.shields.io/github/actions/workflow/status/kirchDev/laravel-pbac/ci.yml?branch=main&style=flat-square&label=tests)](https://github.com/kirchDev/laravel-pbac/actions/workflows/ci.yml)
+[![PHP Version](https://img.shields.io/packagist/dependency-v/kirchdev/laravel-pbac/php?style=flat-square&color=8993be)](https://packagist.org/packages/kirchdev/laravel-pbac)
+[![Laravel Version](https://img.shields.io/packagist/dependency-v/kirchdev/laravel-pbac/illuminate%2Fsupport?style=flat-square&label=laravel&color=ff2d20)](https://packagist.org/packages/kirchdev/laravel-pbac)
+[![License: MIT](https://img.shields.io/packagist/l/kirchdev/laravel-pbac.svg?style=flat-square&color=10b981)](LICENSE)
 
-## Installation
+</div>
+
+---
+
+```php
+Pbac::withOrganisation($org->id, fn () => $user->can('members.invite')); // ✅
+```
+
+That's it. Tenant-aware authorization in one line, native Laravel `Gate` semantics, no manual scope plumbing.
+
+## ✨ Features
+
+- **🎭 Roles & permissions** — plain Eloquent models you can swap out for your own (UUID / ULID / int keys).
+- **🏢 Organisation/tenant scoping** — first-class, with a pluggable `OrganisationResolver`. Scopes never bleed across tenants.
+- **🚪 Native `Gate` integration** — `$user->can()`, `Gate::allows()`, `Gate::inspect()` all Just Work, with fallback to native Laravel gates.
+- **⚡ Per-request decision cache** — repeated checks within a request are free. Auto-invalidates on role/permission mutations.
+- **🔍 Decision trace** — opt-in audit trail of _why_ a check returned what it did. Redacted in production by default.
+- **🚀 Octane-aware** — optional reset listeners on `RequestTerminated`, `TaskTerminated`, `TickTerminated`. No stale state across requests.
+- **🧰 Heavy configuration** — model / table / column / key types all overridable. UUID setups supported out of the box.
+- **🧪 Library-grade** — Pest 4 + Testbench, no host app needed.
+
+## 📦 Installation
 
 ```bash
 composer require kirchdev/laravel-pbac
@@ -33,9 +51,9 @@ Optionally publish the config:
 php artisan vendor:publish --tag=pbac-config
 ```
 
-## Quick start
+## 🚀 Quick start
 
-Add the `HasRoles` trait to whichever model should be authorizable (usually `User`):
+Add the `HasRoles` trait to whichever model should be authorizable:
 
 ```php
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -47,73 +65,125 @@ class User extends Authenticatable
 }
 ```
 
-Create roles and permissions, assign them, and check abilities:
+Create roles, attach permissions, assign, check:
 
 ```php
-use KirchDev\Pbac\Models\Permission;
-use KirchDev\Pbac\Models\Role;
+use KirchDev\Pbac\Models\{Permission, Role};
 
 $role = Role::create(['name' => 'editor']);
-$permission = Permission::create(['name' => 'posts.update']);
-$role->permissions()->attach($permission);
+$role->permissions()->attach(
+    Permission::create(['name' => 'posts.update'])
+);
 
 $user->assignRole($role);
 
-$user->can('posts.update'); // true
+$user->can('posts.update');     // ✅ true
+Gate::allows('posts.update');   // ✅ true (same plumbing)
+Gate::inspect('posts.update');  // ✅ Response with trace (if enabled)
 ```
 
-## Organisation context (multi-tenant)
+## 🏢 Multi-tenant authorization
 
-Enable organisation scoping in `config/pbac.php`:
+Enable organisation scoping:
 
 ```php
+// config/pbac.php
 'organisation' => [
     'enabled' => true,
     'resolver' => \KirchDev\Pbac\Organisation\DefaultOrganisationResolver::class,
 ],
 ```
 
-Then scope checks for the current request:
+Scope authorization for the current request:
 
 ```php
 use KirchDev\Pbac\Facades\Pbac;
 
-Pbac::withOrganisation($organisationId, function () use ($user) {
-    return $user->can('members.invite');
+Pbac::withOrganisation($organisation->id, function () use ($user) {
+    $user->can('members.invite'); // checked against org-bound roles
+    $user->can('billing.view');   // …same scope
 });
+
+// Global checks — no active org
+Pbac::withoutOrganisation(fn () => $user->can('admin.impersonate'));
 ```
 
-The default resolver is an in-memory holder you set via `Pbac::withOrganisation()` / `Pbac::withoutOrganisation()`. Provide your own implementation of `KirchDev\Pbac\Contracts\OrganisationResolver` (e.g. backed by your tenancy package or a route binding) and wire it via `pbac.organisation.resolver`.
+The decision cache resets on scope enter/exit, so checks **never bleed across tenants**.
 
-## Configuration highlights
+Bring your own resolver (e.g. backed by a tenancy package or route binding):
 
-`config/pbac.php` is heavily parameterised — see the file for full inline documentation. The most common knobs:
+```php
+final class TenantRouteResolver implements \KirchDev\Pbac\Contracts\OrganisationResolver
+{
+    public function getOrganisationId(): int|string|null
+    {
+        return request()->route('organisation')?->getKey();
+    }
+    // …setOrganisationId, clearOrganisationId
+}
+```
 
-| Key                                              | What it controls                                                                                                                |
-| :----------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
-| `models.*`                                       | Swap any of the four Eloquent models (`Role`, `Permission`, `RoleAssignment`, `RolePermission`).                                |
-| `table_names.*`                                  | Override table names if defaults collide with existing tables.                                                                  |
-| `keys.*`                                         | Use `id`, `uuid`, or `ulid` for primary keys, model morphs, target morphs, and organisation FK — set before running migrations. |
-| `column_names.*`                                 | Pivot and morph key column names (useful for UUID setups).                                                                      |
-| `organisation.enabled` / `organisation.resolver` | Toggle multi-tenancy; provide a custom resolver.                                                                                |
-| `gate.fallback_to_laravel_gates`                 | Whether unmatched abilities fall back to native Laravel gates.                                                                  |
-| `trace.enabled`                                  | Capture a per-decision explanation. Redacted in production by default.                                                          |
-| `cache.decision_store`                           | Decision cache backend (`request` by default).                                                                                  |
-| `register_octane_reset_listener`                 | Reset scoped state at Octane worker boundaries.                                                                                 |
+Wire it via `pbac.organisation.resolver`.
 
-## Testing
+## 🔍 Decision trace
+
+Wondering _why_ a permission check returned what it did? Turn on tracing:
+
+```php
+// config/pbac.php
+'trace' => [
+    'enabled' => true,
+    'redact_in_production' => true,
+],
+```
+
+```php
+$response = Gate::inspect('posts.update', $post);
+
+$response->code();    // 'pbac.granted'
+$response->message(); // 'role:editor → permission:posts.update (org-scoped)'
+```
+
+Production environments redact role names and target details by default — opt-in to surface them per-route if you need.
+
+## ⚙️ Configuration highlights
+
+`config/pbac.php` is heavily parameterised — see the file for inline docs. Most common knobs:
+
+| Key                                  | What it controls                                                                                         |
+| :----------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| `models.*`                           | Swap any of the 4 Eloquent models (Role / Permission / RoleAssignment / RolePermission).                 |
+| `table_names.*`                      | Override defaults if they collide with existing tables.                                                  |
+| `keys.*`                             | `id` / `uuid` / `ulid` for primary keys, model morphs, target morphs, org FK. Set **before** migrations. |
+| `column_names.*`                     | Pivot and morph key column names (handy for UUID setups).                                                |
+| `organisation.enabled` / `.resolver` | Toggle multi-tenancy, plug a custom resolver.                                                            |
+| `gate.fallback_to_laravel_gates`     | Whether unmatched abilities fall back to native Laravel gates.                                           |
+| `trace.enabled`                      | Capture per-decision explanations. Redacted in prod by default.                                          |
+| `cache.decision_store`               | Decision cache backend (`request` by default).                                                           |
+| `register_octane_reset_listener`     | Reset scoped state at Octane worker boundaries.                                                          |
+
+## 🧪 Testing
 
 ```bash
 composer install
-composer test       # Pest
-composer pint       # Pint (test mode)
+composer test       # Pest 4
+composer pint       # Laravel Pint (test mode)
 composer larastan   # Larastan / PHPStan
 ```
 
-## Versioning
+The test suite runs via Testbench + in-memory SQLite — no host app required.
 
-This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) for release notes.
+## 🤝 Contributing
 
-## License
+PRs welcome. Conventional Commits required (enforced via commitlint). Husky runs Pint + Larastan + oxlint + oxfmt on `git commit`, so you can mostly forget about style.
 
-The MIT License (MIT). See [LICENSE](LICENSE) for details.
+> [!TIP]
+> Run `pnpm check:fix` (Node tooling) and `composer pint:fix` (PHP) before pushing — CI will catch what husky missed.
+
+## 🛣️ Versioning
+
+[Semantic Versioning](https://semver.org/). Release notes in [CHANGELOG.md](CHANGELOG.md) — managed by [release-please](https://github.com/googleapis/release-please).
+
+## 📄 License
+
+[MIT](LICENSE) © [Titus Kirch](https://github.com/TitusKirch/) / [IT-Dienstleistungen Titus Kirch](https://kirch.dev)
