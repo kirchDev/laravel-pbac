@@ -6,6 +6,7 @@ namespace KirchDev\Pbac;
 
 use Closure;
 use KirchDev\Pbac\Authorization\DecisionCache;
+use KirchDev\Pbac\Authorization\PermissionResolver;
 use KirchDev\Pbac\Contracts\OrganisationResolver;
 use KirchDev\Pbac\Decision\Decision;
 use KirchDev\Pbac\Decision\DecisionTrace;
@@ -19,6 +20,7 @@ final class PbacManager
     public function __construct(
         private readonly OrganisationResolver $organisationResolver,
         private readonly DecisionCache $decisionCache,
+        private readonly PermissionResolver $permissionResolver,
     ) {}
 
     public function currentOrganisationId(): int|string|null
@@ -123,6 +125,7 @@ final class PbacManager
     {
         $this->organisationResolver->clearOrganisationId();
         $this->decisionCache->reset();
+        $this->permissionResolver->reset();
         $this->lastDecision = null;
         $this->traceUnredactedScope = false;
     }

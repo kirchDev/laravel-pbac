@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace KirchDev\Pbac;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use KirchDev\Pbac\Authorization\DecisionCache;
 use KirchDev\Pbac\Authorization\PbacAuthorizer;
+use KirchDev\Pbac\Authorization\PermissionResolver;
 use KirchDev\Pbac\Console\MigrateFromSpatieCommand;
 use KirchDev\Pbac\Contracts\Authorizer;
 use KirchDev\Pbac\Contracts\OrganisationResolver;
@@ -28,6 +30,7 @@ class PbacServiceProvider extends ServiceProvider
         });
 
         $this->app->scoped(DecisionCache::class);
+        $this->app->scoped(PermissionResolver::class);
         $this->app->scoped(RolePermissionQuery::class);
         $this->app->scoped(Authorizer::class, PbacAuthorizer::class);
         $this->app->scoped(PbacGate::class);
@@ -58,6 +61,29 @@ class PbacServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->registerOptionalCommands();
         }
+
+        $this->registerPermissionCacheInvalidation();
+    }
+
+    /**
+     * Flush the per-request permission cache whenever a Permission row is created
+     * or deleted within the same process — protects against stale negative hits
+     * (e.g. a Gate::allows() returning false because we cached "doesn't exist"
+     * before someone called Permission::findOrCreate() in the same request).
+     */
+    private function registerPermissionCacheInvalidation(): void
+    {
+        /** @var class-string<Model> $permissionModel */
+        $permissionModel = (string) config('pbac.models.permission');
+
+        $flush = function () {
+            if ($this->app->resolved(PermissionResolver::class)) {
+                $this->app->make(PermissionResolver::class)->flush();
+            }
+        };
+
+        $permissionModel::created($flush);
+        $permissionModel::deleted($flush);
     }
 
     private function registerOptionalCommands(): void

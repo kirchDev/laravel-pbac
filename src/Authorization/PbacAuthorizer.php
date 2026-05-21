@@ -12,6 +12,7 @@ use KirchDev\Pbac\Decision\Decision;
 use KirchDev\Pbac\Decision\DecisionTrace;
 use KirchDev\Pbac\PbacManager;
 use KirchDev\Pbac\Queries\RolePermissionQuery;
+// PermissionResolver lives in the same namespace; no extra import.
 use KirchDev\Pbac\Support\ModelIdentifier;
 use KirchDev\Pbac\Support\Target;
 
@@ -22,6 +23,7 @@ final class PbacAuthorizer implements Authorizer
         private readonly DecisionCache $cache,
         private readonly RolePermissionQuery $rolePermissionQuery,
         private readonly PbacManager $manager,
+        private readonly PermissionResolver $permissions,
     ) {}
 
     public function inspect(mixed $actor, string $ability, array $arguments = []): ?Decision
@@ -73,12 +75,7 @@ final class PbacAuthorizer implements Authorizer
 
     private function permission(string $ability): ?Model
     {
-        /** @var class-string<Model> $permissionModel */
-        $permissionModel = config('pbac.models.permission');
-
-        return $permissionModel::query()
-            ->where('name', $ability)
-            ->first();
+        return $this->permissions->resolve($ability);
     }
 
     private function rolePermissionAllows(Model $actor, Model $permission, ?ModelIdentifier $target, DecisionTrace $trace): bool
