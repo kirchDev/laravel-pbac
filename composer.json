@@ -1,0 +1,79 @@
+{
+  "$schema": "https://getcomposer.org/schema.json",
+  "name": "kirchdev/laravel-pbac",
+  "description": "Policy-based access control for Laravel: roles, permissions, organisation-scoped authorization, Gate integration, and a decision cache.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "laravel",
+    "authorization",
+    "pbac",
+    "rbac",
+    "permissions",
+    "roles",
+    "gate",
+    "multi-tenant"
+  ],
+  "authors": [
+    {
+      "name": "Titus Kirch",
+      "email": "titus.kirch@kirch.dev",
+      "homepage": "https://kirch.dev",
+      "role": "Developer"
+    }
+  ],
+  "homepage": "https://github.com/kirchDev/laravel-pbac",
+  "support": {
+    "issues": "https://github.com/kirchDev/laravel-pbac/issues",
+    "source": "https://github.com/kirchDev/laravel-pbac"
+  },
+  "require": {
+    "php": "^8.4",
+    "illuminate/auth": "^13.0",
+    "illuminate/contracts": "^13.0",
+    "illuminate/database": "^13.0",
+    "illuminate/events": "^13.0",
+    "illuminate/support": "^13.0"
+  },
+  "require-dev": {
+    "larastan/larastan": "^3.9",
+    "laravel/pint": "^1.29",
+    "orchestra/testbench": "^11.0",
+    "pestphp/pest": "^4.7",
+    "pestphp/pest-plugin-laravel": "^4.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "KirchDev\\Pbac\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "KirchDev\\Pbac\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/pest",
+    "pint": "vendor/bin/pint --test",
+    "pint:fix": "vendor/bin/pint",
+    "larastan": "vendor/bin/phpstan analyse --memory-limit=512M"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "0.x-dev"
+    },
+    "laravel": {
+      "providers": [
+        "KirchDev\\Pbac\\PbacServiceProvider"
+      ]
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
