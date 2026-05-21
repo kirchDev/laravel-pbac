@@ -22,7 +22,7 @@ final class MigrateFromSpatieCommand extends Command
         {--model-permissions=model_has_permissions : Source model_has_permissions table (empty string disables direct-permission handling)}
         {--team-column=team_id : Spatie team column on roles/model_has_roles/model_has_permissions}
         {--guard= : Only migrate rows where guard_name matches this value (otherwise all guards are imported)}
-        {--guard-prefix : Prefix permission and role names with "<guard>:" — useful when migrating multiple guards into the guard-less PBAC schema}
+        {--guard-prefix : Prefix permission and role names with "<guard>:" - useful when migrating multiple guards into the guard-less PBAC schema}
         {--with-teams : Carry team_id over as organisation_id on PBAC roles}
         {--collapse-direct-permissions : Materialise model_has_permissions as per-user roles named "user:<id>"}
         {--commit : Persist the migration. Without this flag the command runs as a dry-run inside a rolled-back transaction.}

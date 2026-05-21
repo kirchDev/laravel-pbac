@@ -133,7 +133,7 @@ it('migrates permissions, roles, grants, and assignments when --commit is set', 
         ->and(DB::table('pbac_roles')->where('name', 'admin')->whereNull('organisation_id')->exists())->toBeTrue();
 });
 
-it('is idempotent — running --commit twice produces the same end state', function () {
+it('is idempotent - running --commit twice produces the same end state', function () {
     seedSpatieFixture();
 
     $this->artisan('pbac:migrate-from-spatie', ['--with-teams' => true, '--commit' => true])->assertSuccessful();
