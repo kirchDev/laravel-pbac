@@ -22,27 +22,56 @@ abstract class TestCase extends OrchestraTestCase
     protected function defineEnvironment($app): void
     {
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('database.connections.testing', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ]);
+        $app['config']->set('database.connections.testing', $this->databaseConfig());
 
         $app['config']->set('auth.defaults.guard', 'web');
         $app['config']->set('auth.providers.users.model', User::class);
         $app['config']->set('pbac.organisation.enabled', true);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    protected function databaseConfig(): array
+    {
+        $driver = getenv('DB_CONNECTION') ?: 'sqlite';
+
+        return match ($driver) {
+            'pgsql' => [
+                'driver' => 'pgsql',
+                'host' => getenv('DB_HOST') ?: '127.0.0.1',
+                'port' => (int) (getenv('DB_PORT') ?: 5432),
+                'database' => getenv('DB_DATABASE') ?: 'pbac_test',
+                'username' => getenv('DB_USERNAME') ?: 'pbac',
+                'password' => getenv('DB_PASSWORD') ?: 'pbac',
+                'charset' => 'utf8',
+                'prefix' => '',
+                'schema' => 'public',
+                'sslmode' => 'prefer',
+            ],
+            default => [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+            ],
+        };
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->artisan('migrate')->run();
+        // migrate:fresh rather than migrate so persistent drivers (e.g. PostgreSQL in CI)
+        // get a clean schema per test; in-memory SQLite is already fresh per process.
+        $this->artisan('migrate:fresh')->run();
         $this->createFixtureTables();
     }
 
     private function createFixtureTables(): void
     {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('projects');
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');

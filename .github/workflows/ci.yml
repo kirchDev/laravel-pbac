@@ -128,6 +128,56 @@ jobs:
       - name: Run Pest
         run: composer test
 
+  test-pgsql:
+    name: Pest (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: pbac_test
+          POSTGRES_USER: pbac
+          POSTGRES_PASSWORD: pbac
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pbac"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: pbac_test
+      DB_USERNAME: pbac
+      DB_PASSWORD: pbac
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_pgsql
+          coverage: none
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-pgsql-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-pgsql-
+      - name: Install Composer dependencies
+        run: composer update --prefer-dist --no-progress
+      - name: Run Pest
+        run: composer test
+
   lint:
     name: Pint
     runs-on: ubuntu-latest
