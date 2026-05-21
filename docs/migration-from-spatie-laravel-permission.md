@@ -30,7 +30,7 @@ section before touching code.
 > `laravel-pbac` is still a PBAC implementation — abilities flow through
 > Laravel's `Gate`, permissions can be target-bound, and decisions are
 > traceable. What differs from Spatie is the **assignment model**: every
-> permission is granted to a *role*, and users receive permissions only by
+> permission is granted to a _role_, and users receive permissions only by
 > being assigned a role. There is no `User::givePermissionTo()` /
 > `User::hasDirectPermission()` equivalent. If your Spatie setup uses direct
 > grants, model them as single-user roles (typically `user:{id}`) before the
@@ -57,17 +57,17 @@ section before touching code.
 
 ## Conceptual differences
 
-| Topic                  | `spatie/laravel-permission`                                          | `kirchdev/laravel-pbac`                                                                |
-| :--------------------- | :------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| Assignment surface     | Role → Permission **and** User → Permission (direct)                 | Role → Permission only                                                                 |
-| Guards                 | Multi-guard (`guard_name` column)                                    | Guard-less — abilities resolve through Laravel's `Gate`, not a guard map               |
-| Multi-tenancy          | "Teams" feature, **static** context (`setPermissionsTeamId`)         | "Organisations", **scoped closures** (`Pbac::withOrganisation($id, fn () => …)`)       |
-| Target-bound grants    | Not first-class                                                      | First-class — `Role::givePermissionTo($perm, $target)` stores a polymorphic target     |
-| Decision cache         | Permission cache (long-lived, must be flushed)                       | Per-request decision cache; auto-invalidated on role/permission writes                 |
-| Decision trace         | Not available                                                        | Opt-in `Gate::inspect()` returns a `Response` with `code()` + `message()`              |
-| Wildcards (`posts.*`)  | Optional via `enable-wildcard-permission`                            | Not supported — use explicit ability names                                             |
-| Octane                 | Manual reset                                                         | Optional listener on `RequestTerminated` / `TaskTerminated` / `TickTerminated`         |
-| `HasPermissions` trait | Yes, separate from `HasRoles`                                        | Does not exist — direct grants are out of scope                                        |
+| Topic                  | `spatie/laravel-permission`                                  | `kirchdev/laravel-pbac`                                                            |
+| :--------------------- | :----------------------------------------------------------- | :--------------------------------------------------------------------------------- |
+| Assignment surface     | Role → Permission **and** User → Permission (direct)         | Role → Permission only                                                             |
+| Guards                 | Multi-guard (`guard_name` column)                            | Guard-less — abilities resolve through Laravel's `Gate`, not a guard map           |
+| Multi-tenancy          | "Teams" feature, **static** context (`setPermissionsTeamId`) | "Organisations", **scoped closures** (`Pbac::withOrganisation($id, fn () => …)`)   |
+| Target-bound grants    | Not first-class                                              | First-class — `Role::givePermissionTo($perm, $target)` stores a polymorphic target |
+| Decision cache         | Permission cache (long-lived, must be flushed)               | Per-request decision cache; auto-invalidated on role/permission writes             |
+| Decision trace         | Not available                                                | Opt-in `Gate::inspect()` returns a `Response` with `code()` + `message()`          |
+| Wildcards (`posts.*`)  | Optional via `enable-wildcard-permission`                    | Not supported — use explicit ability names                                         |
+| Octane                 | Manual reset                                                 | Optional listener on `RequestTerminated` / `TaskTerminated` / `TickTerminated`     |
+| `HasPermissions` trait | Yes, separate from `HasRoles`                                | Does not exist — direct grants are out of scope                                    |
 
 ### Direct user permissions
 
@@ -252,20 +252,20 @@ php artisan pbac:migrate-from-spatie \
 All option defaults match Spatie's default schema. Override per flag if your
 installation diverges:
 
-| Flag                              | Default                | Purpose                                                            |
-| :-------------------------------- | :--------------------- | :----------------------------------------------------------------- |
-| `--connection=<name>`             | app default            | DB connection to read/write on                                     |
-| `--roles=<table>`                 | `roles`                | Source Spatie roles table                                          |
-| `--permissions=<table>`           | `permissions`          | Source Spatie permissions table                                    |
-| `--role-permissions=<table>`      | `role_has_permissions` | Source pivot                                                       |
-| `--model-roles=<table>`           | `model_has_roles`      | Source role assignments                                            |
-| `--model-permissions=<table>`     | `model_has_permissions`| Source direct grants (empty string disables)                       |
-| `--team-column=<column>`          | `team_id`              | Spatie's team column                                               |
-| `--guard=<name>`                  | _all guards_           | Filter source rows by `guard_name`                                 |
-| `--guard-prefix`                  | off                    | Prefix ability and role names with `<guard>:`                      |
-| `--with-teams`                    | off                    | Carry `team_id` over as `organisation_id` on PBAC roles            |
-| `--collapse-direct-permissions`   | off                    | Materialise `model_has_permissions` as `user:{id}` roles           |
-| `--commit`                        | off                    | Persist changes. Without it the command runs inside a rolled-back transaction. |
+| Flag                            | Default                 | Purpose                                                                        |
+| :------------------------------ | :---------------------- | :----------------------------------------------------------------------------- |
+| `--connection=<name>`           | app default             | DB connection to read/write on                                                 |
+| `--roles=<table>`               | `roles`                 | Source Spatie roles table                                                      |
+| `--permissions=<table>`         | `permissions`           | Source Spatie permissions table                                                |
+| `--role-permissions=<table>`    | `role_has_permissions`  | Source pivot                                                                   |
+| `--model-roles=<table>`         | `model_has_roles`       | Source role assignments                                                        |
+| `--model-permissions=<table>`   | `model_has_permissions` | Source direct grants (empty string disables)                                   |
+| `--team-column=<column>`        | `team_id`               | Spatie's team column                                                           |
+| `--guard=<name>`                | _all guards_            | Filter source rows by `guard_name`                                             |
+| `--guard-prefix`                | off                     | Prefix ability and role names with `<guard>:`                                  |
+| `--with-teams`                  | off                     | Carry `team_id` over as `organisation_id` on PBAC roles                        |
+| `--collapse-direct-permissions` | off                     | Materialise `model_has_permissions` as `user:{id}` roles                       |
+| `--commit`                      | off                     | Persist changes. Without it the command runs inside a rolled-back transaction. |
 
 The command writes against the **PBAC table names from your config**, so make
 sure you have already renamed them as described in [Step 2](#step-2-reconcile-config)
@@ -457,21 +457,21 @@ Replace the trait import on every authorizable model:
 
 ### Role and permission management
 
-| What you want                  | Spatie                                              | PBAC                                                                |
-| :----------------------------- | :-------------------------------------------------- | :------------------------------------------------------------------ |
-| Create a role                  | `Role::create(['name' => 'editor'])`                | `Role::create(['name' => 'editor'])`                                |
-| Create a role for a tenant     | `Role::create(['name' => 'editor', 'team_id' => 1])`| `Role::create(['name' => 'editor', 'organisation_id' => 1])`        |
-| Create a permission            | `Permission::create(['name' => 'posts.update'])`    | `Permission::create(['name' => 'posts.update'])`                    |
-| Find or create                 | `Role::findOrCreate('editor', $guard)`              | `Role::findOrCreate('editor', $organisationId)`                     |
-| Assign role to user            | `$user->assignRole($role)` / `$user->assignRole('a','b')` | `$user->assignRole($role)` / `$user->assignRoles('a', 'b')`         |
-| Remove role from user          | `$user->removeRole($role)`                          | `$user->removeRole($role)` / `$user->removeRoles('a', 'b')`         |
-| Sync roles                     | `$user->syncRoles(['a', 'b'])`                      | `$user->syncRoles(['a', 'b'])`                                      |
-| Check role                     | `$user->hasRole('editor')`                          | `$user->hasRole('editor')`                                          |
-| Grant permission to role       | `$role->givePermissionTo('posts.update')`           | `$role->givePermissionTo('posts.update')`                           |
-| Target-scoped grant            | _(not first-class)_                                 | `$role->givePermissionTo('posts.update', $post)`                    |
-| Revoke from role               | `$role->revokePermissionTo('posts.update')`         | `$role->revokePermissionTo('posts.update', $target = null)`         |
-| List a user's permission names | `$user->getPermissionNames()`                       | `$user->permissionNames()`                                          |
-| Direct user permission         | `$user->givePermissionTo('foo')`                    | _(use a per-user role; see Step 3)_                                 |
+| What you want                  | Spatie                                                    | PBAC                                                         |
+| :----------------------------- | :-------------------------------------------------------- | :----------------------------------------------------------- |
+| Create a role                  | `Role::create(['name' => 'editor'])`                      | `Role::create(['name' => 'editor'])`                         |
+| Create a role for a tenant     | `Role::create(['name' => 'editor', 'team_id' => 1])`      | `Role::create(['name' => 'editor', 'organisation_id' => 1])` |
+| Create a permission            | `Permission::create(['name' => 'posts.update'])`          | `Permission::create(['name' => 'posts.update'])`             |
+| Find or create                 | `Role::findOrCreate('editor', $guard)`                    | `Role::findOrCreate('editor', $organisationId)`              |
+| Assign role to user            | `$user->assignRole($role)` / `$user->assignRole('a','b')` | `$user->assignRole($role)` / `$user->assignRoles('a', 'b')`  |
+| Remove role from user          | `$user->removeRole($role)`                                | `$user->removeRole($role)` / `$user->removeRoles('a', 'b')`  |
+| Sync roles                     | `$user->syncRoles(['a', 'b'])`                            | `$user->syncRoles(['a', 'b'])`                               |
+| Check role                     | `$user->hasRole('editor')`                                | `$user->hasRole('editor')`                                   |
+| Grant permission to role       | `$role->givePermissionTo('posts.update')`                 | `$role->givePermissionTo('posts.update')`                    |
+| Target-scoped grant            | _(not first-class)_                                       | `$role->givePermissionTo('posts.update', $post)`             |
+| Revoke from role               | `$role->revokePermissionTo('posts.update')`               | `$role->revokePermissionTo('posts.update', $target = null)`  |
+| List a user's permission names | `$user->getPermissionNames()`                             | `$user->permissionNames()`                                   |
+| Direct user permission         | `$user->givePermissionTo('foo')`                          | _(use a per-user role; see Step 3)_                          |
 
 > [!NOTE]
 > `assignRoles()` / `removeRoles()` are variadic and accept any mix of
