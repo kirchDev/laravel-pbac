@@ -133,18 +133,47 @@ Wondering _why_ a permission check returned what it did? Turn on tracing:
 // config/pbac.php
 'trace' => [
     'enabled' => true,
-    'redact_in_production' => true,
+    // null → auto: redact when APP_ENV=production AND APP_DEBUG=false
+    // true|false → forced
+    'redact' => null,
+    'log' => [
+        'enabled' => false,           // structured logging via Laravel's logger
+        'channel' => null,            // null = default channel
+        'level' => 'info',
+        'on' => 'deny',               // or 'all'
+    ],
 ],
 ```
+
+`Gate::inspect()` carries the decision's reason code via `Response::message()`:
 
 ```php
 $response = Gate::inspect('posts.update', $post);
 
-$response->code();    // 'pbac.granted'
-$response->message(); // 'role:editor → permission:posts.update (org-scoped)'
+$response->allowed();  // bool
+$response->message();  // 'pbac.role_permission_allowed' | 'pbac.no_matching_role_permission' | …
 ```
 
-Production environments redact role names and target details by default — opt-in to surface them per-route if you need.
+For the human-readable trace, reach for the last decision through the `Pbac` facade:
+
+```php
+use KirchDev\Pbac\Facades\Pbac;
+
+$user->can('posts.update', $post);
+
+Pbac::lastDecision()?->trace()->visible();   // structured entries
+Pbac::lastDecision()?->trace()->formatted(); // 'role_permission_query(allowed=1, targeted=1) → role_permission_allowed'
+```
+
+Production redacts trace context arrays by default (step names stay; values are stripped). Opt in to the full trace per request when you need it — e.g. for an admin debug route:
+
+```php
+Pbac::withUnredactedTrace(function () use ($user, $post) {
+    $user->can('posts.update', $post);
+
+    return Pbac::lastDecision()?->trace()->formatted(); // unredacted
+});
+```
 
 ## ⚙️ Configuration highlights
 

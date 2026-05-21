@@ -163,11 +163,25 @@ return [
     | stay redacted so role names, permission internals, and target details are
     | not leaked through authorization responses.
     |
+    | "redact" accepts:
+    |   - null  → auto: redact when APP_ENV=production AND APP_DEBUG=false
+    |   - true  → always redact (drop context arrays, keep step names)
+    |   - false → never redact
+    |
+    | "log.enabled" enables structured logging of decisions via Laravel's logger.
+    | "log.on" picks the trigger: "deny" (default) or "all".
+    |
     */
 
     'trace' => [
         'enabled' => false,
-        'redact_in_production' => true,
+        'redact' => null,
+        'log' => [
+            'enabled' => false,
+            'channel' => null,
+            'level' => 'info',
+            'on' => 'deny',
+        ],
     ],
 
     /*
