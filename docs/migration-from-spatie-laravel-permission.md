@@ -4,14 +4,30 @@ This guide walks through migrating an existing Laravel application from
 [`spatie/laravel-permission`](https://github.com/spatie/laravel-permission) to
 [`kirchdev/laravel-pbac`](https://github.com/kirchDev/laravel-pbac).
 
-The two packages overlap conceptually - roles, permissions, an Eloquent pivot
-between them, a `HasRoles` trait on the user - but the data model, the API
+The two packages overlap conceptually — roles, permissions, an Eloquent pivot
+between them, a `HasRoles` trait on the user — but the data model, the API
 surface, and the multi-tenancy contract differ in places where a one-to-one
 swap is **not** safe. Read the [Conceptual differences](#conceptual-differences)
 section before touching code.
 
+> [!CAUTION]
+> **No official support or warranty.** This guide and the
+> `pbac:migrate-from-spatie` Artisan command are provided **as-is**, with
+> **no guarantee** of correctness, completeness, or compatibility with your
+> particular `spatie/laravel-permission` installation. Customised schemas,
+> non-default column names, additional indexes, multi-guard setups, and
+> third-party extensions of Spatie's models are **not** covered by the
+> shipped tooling. Authorization data is security-critical: always run the
+> migration against a **backup** in a **non-production** environment first,
+> verify row counts and a representative set of `Gate` checks, and treat the
+> cutover as an irreversible operation. The author and contributors of
+> `kirchdev/laravel-pbac` accept no liability for data loss, downtime, or
+> authorization incidents arising from following this guide. If your setup
+> deviates from Spatie's defaults, hand-roll the migration as described in
+> [When to hand-roll the migration](#when-to-hand-roll-the-migration).
+
 > [!IMPORTANT]
-> `laravel-pbac` is still a PBAC implementation - abilities flow through
+> `laravel-pbac` is still a PBAC implementation — abilities flow through
 > Laravel's `Gate`, permissions can be target-bound, and decisions are
 > traceable. What differs from Spatie is the **assignment model**: every
 > permission is granted to a *role*, and users receive permissions only by
@@ -26,14 +42,14 @@ section before touching code.
 
 1. [Conceptual differences](#conceptual-differences)
 2. [Pre-migration checklist](#pre-migration-checklist)
-3. [Step 1 - Install `laravel-pbac` side-by-side](#step-1--install-laravel-pbac-side-by-side)
-4. [Step 2 - Reconcile config](#step-2--reconcile-config)
-5. [Step 3 - Migrate the database](#step-3--migrate-the-database)
-6. [Step 4 - Swap the trait and call sites](#step-4--swap-the-trait-and-call-sites)
-7. [Step 5 - Replace teams with organisation scoping](#step-5--replace-teams-with-organisation-scoping)
-8. [Step 6 - Authorization, Gates, middleware](#step-6--authorization-gates-middleware)
-9. [Step 7 - Tests](#step-7--tests)
-10. [Step 8 - Remove `spatie/laravel-permission`](#step-8--remove-spatielaravel-permission)
+3. [Step 1: Install `laravel-pbac` side-by-side](#step-1-install-laravel-pbac-side-by-side)
+4. [Step 2: Reconcile config](#step-2-reconcile-config)
+5. [Step 3: Migrate the database](#step-3-migrate-the-database)
+6. [Step 4: Swap the trait and call sites](#step-4-swap-the-trait-and-call-sites)
+7. [Step 5: Replace teams with organisation scoping](#step-5-replace-teams-with-organisation-scoping)
+8. [Step 6: Authorization, Gates, middleware](#step-6-authorization-gates-middleware)
+9. [Step 7: Tests](#step-7-tests)
+10. [Step 8: Remove `spatie/laravel-permission`](#step-8-remove-spatielaravel-permission)
 11. [API cheat sheet](#api-cheat-sheet)
 12. [Common pitfalls](#common-pitfalls)
 
@@ -44,14 +60,14 @@ section before touching code.
 | Topic                  | `spatie/laravel-permission`                                          | `kirchdev/laravel-pbac`                                                                |
 | :--------------------- | :------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
 | Assignment surface     | Role → Permission **and** User → Permission (direct)                 | Role → Permission only                                                                 |
-| Guards                 | Multi-guard (`guard_name` column)                                    | Guard-less - abilities resolve through Laravel's `Gate`, not a guard map               |
+| Guards                 | Multi-guard (`guard_name` column)                                    | Guard-less — abilities resolve through Laravel's `Gate`, not a guard map               |
 | Multi-tenancy          | "Teams" feature, **static** context (`setPermissionsTeamId`)         | "Organisations", **scoped closures** (`Pbac::withOrganisation($id, fn () => …)`)       |
-| Target-bound grants    | Not first-class                                                      | First-class - `Role::givePermissionTo($perm, $target)` stores a polymorphic target     |
+| Target-bound grants    | Not first-class                                                      | First-class — `Role::givePermissionTo($perm, $target)` stores a polymorphic target     |
 | Decision cache         | Permission cache (long-lived, must be flushed)                       | Per-request decision cache; auto-invalidated on role/permission writes                 |
 | Decision trace         | Not available                                                        | Opt-in `Gate::inspect()` returns a `Response` with `code()` + `message()`              |
-| Wildcards (`posts.*`)  | Optional via `enable-wildcard-permission`                            | Not supported - use explicit ability names                                             |
+| Wildcards (`posts.*`)  | Optional via `enable-wildcard-permission`                            | Not supported — use explicit ability names                                             |
 | Octane                 | Manual reset                                                         | Optional listener on `RequestTerminated` / `TaskTerminated` / `TickTerminated`         |
-| `HasPermissions` trait | Yes, separate from `HasRoles`                                        | Does not exist - direct grants are out of scope                                        |
+| `HasPermissions` trait | Yes, separate from `HasRoles`                                        | Does not exist — direct grants are out of scope                                        |
 
 ### Direct user permissions
 
@@ -65,13 +81,13 @@ $user->hasDirectPermission('posts.update');
 `laravel-pbac` does **not** support this. If you depend on it, model each user's
 direct permissions as a private per-user role before the cutover, for example a
 role named `user:{user_id}`. The data migration in
-[Step 3](#step-3--migrate-the-database) covers this.
+[Step 3](#step-3-migrate-the-database) covers this.
 
 ---
 
 ## Pre-migration checklist
 
-Before you start, audit the codebase for the patterns below - they each have a
+Before you start, audit the codebase for the patterns below — they each have a
 mapping but the rewrite is mechanical, not magical:
 
 ```bash
@@ -97,12 +113,12 @@ grep -RIn --include='*.php' "->middleware\(\['role:\|->middleware\(\['permission
 grep -RIn --include='*.blade.php' '@role\|@hasrole\|@hasanyrole\|@hasallroles\|@permission\|@can\b\|@unlessrole' resources/views/
 ```
 
-Capture the hit list - every line is a candidate for [Step 4](#step-4--swap-the-trait-and-call-sites)
-or [Step 6](#step-6--authorization-gates-middleware).
+Capture the hit list — every line is a candidate for [Step 4](#step-4-swap-the-trait-and-call-sites)
+or [Step 6](#step-6-authorization-gates-middleware).
 
 ---
 
-## Step 1 - Install `laravel-pbac` side-by-side
+## Step 1: Install `laravel-pbac` side-by-side
 
 You will run both packages simultaneously during the migration. Add `laravel-pbac`
 without removing Spatie:
@@ -116,12 +132,12 @@ php artisan vendor:publish --tag=pbac-migrations
 > [!WARNING]
 > The default table names in `laravel-pbac` collide with Spatie's defaults
 > (`roles`, `permissions`, `role_has_permissions`, `model_has_roles`). Do **not**
-> run `php artisan migrate` yet - first rename the PBAC tables via config so the
-> two packages can coexist. See [Step 2](#step-2--reconcile-config).
+> run `php artisan migrate` yet — first rename the PBAC tables via config so the
+> two packages can coexist. See [Step 2](#step-2-reconcile-config).
 
 ---
 
-## Step 2 - Reconcile config
+## Step 2: Reconcile config
 
 While both packages are installed, rename PBAC's tables so they don't shadow
 Spatie's. In `config/pbac.php`:
@@ -136,7 +152,7 @@ Spatie's. In `config/pbac.php`:
 ```
 
 If your existing Spatie schema uses UUID or ULID keys, mirror that in PBAC
-**before** migrating - it bakes column types into the migrations:
+**before** migrating — it bakes column types into the migrations:
 
 ```php
 'keys' => [
@@ -162,7 +178,7 @@ If you used Spatie's teams feature, enable PBAC's organisation scoping:
 ],
 ```
 
-Gate behaviour is conservative by default - PBAC only answers gate checks whose
+Gate behaviour is conservative by default — PBAC only answers gate checks whose
 ability name matches a row in the `permissions` table, and falls through to
 Laravel's native gates / policies otherwise. Keep these defaults during the
 migration:
@@ -186,10 +202,10 @@ You should see four new `pbac_*` tables alongside the Spatie tables.
 
 ---
 
-## Step 3 - Migrate the database
+## Step 3: Migrate the database
 
 The package ships an Artisan command that handles the data move idempotently.
-It runs as a dry-run by default - pass `--commit` to actually write.
+It runs as a dry-run by default — pass `--commit` to actually write.
 
 ```bash
 # Dry-run: validates tables, reports row counts, rolls back at the end.
@@ -231,8 +247,8 @@ installation diverges:
 | `--commit`                        | off                    | Persist changes. Without it the command runs inside a rolled-back transaction. |
 
 The command writes against the **PBAC table names from your config**, so make
-sure you have already renamed them as described in [Step 2](#step-2--reconcile-config)
-before running it - otherwise it will refuse to run.
+sure you have already renamed them as described in [Step 2](#step-2-reconcile-config)
+before running it — otherwise it will refuse to run.
 
 ### When to hand-roll the migration
 
@@ -244,16 +260,16 @@ instead if you need:
 - A custom ability-name transform beyond `--guard-prefix` (e.g. renaming
   `posts.update` to `post.update`).
 - A non-standard target morph mapping (PBAC writes `target_type = null`,
-  `target_id = null` for all migrated grants - Spatie has no target dimension).
+  `target_id = null` for all migrated grants — Spatie has no target dimension).
 
-A template you can adapt - the long-form equivalent of the Artisan command,
+A template you can adapt — the long-form equivalent of the Artisan command,
 reach for it only when one of the bullet points above applies. The example
 below assumes:
 
 - Spatie default tables (`roles`, `permissions`, `model_has_roles`, `role_has_permissions`, `model_has_permissions`).
-- PBAC tables renamed to `pbac_*` per [Step 2](#step-2--reconcile-config).
+- PBAC tables renamed to `pbac_*` per [Step 2](#step-2-reconcile-config).
 - Spatie's team column is `team_id`; PBAC's organisation column is `organisation_id`.
-- Spatie's `guard_name = 'web'` (single guard). For multi-guard setups, namespace permissions per guard (e.g. `web:posts.update`) so they remain unique under PBAC's `(name)` unique index - or run the migration once per guard with a `WHERE guard_name = …` filter and a per-guard ability prefix.
+- Spatie's `guard_name = 'web'` (single guard). For multi-guard setups, namespace permissions per guard (e.g. `web:posts.update`) so they remain unique under PBAC's `(name)` unique index — or run the migration once per guard with a `WHERE guard_name = …` filter and a per-guard ability prefix.
 
 ```php
 <?php
@@ -404,7 +420,7 @@ UNION ALL SELECT 'pbac.model_has_roles',         COUNT(*) FROM pbac_model_has_ro
 
 ---
 
-## Step 4 - Swap the trait and call sites
+## Step 4: Swap the trait and call sites
 
 Replace the trait import on every authorizable model:
 
@@ -451,12 +467,12 @@ Replace the trait import on every authorizable model:
   `hasAllPermissions()` / `hasAnyPermission()`. The replacement is `Gate`
   (`$user->can('posts.update')`) or `collect($user->permissionNames())->intersect($names)`.
 - `Role::findByName($name)` requires an explicit organisation id when
-  organisation scoping is enabled - the active resolver context is **not**
+  organisation scoping is enabled — the active resolver context is **not**
   consulted by the static finder.
 
 ---
 
-## Step 5 - Replace teams with organisation scoping
+## Step 5: Replace teams with organisation scoping
 
 Spatie's teams feature is process-wide and stateful:
 
@@ -482,7 +498,7 @@ Pbac::withoutOrganisation(fn () => $user->can('admin.impersonate'));
 Where to call `withOrganisation()`:
 
 - **Routes**: prefer a route-bound resolver (see below) over per-controller wrapping.
-- **Jobs / queue listeners**: wrap `handle()` - `Pbac::withOrganisation($this->orgId, fn () => …)`.
+- **Jobs / queue listeners**: wrap `handle()` — `Pbac::withOrganisation($this->orgId, fn () => …)`.
 - **Console commands**: wrap the body of `handle()`.
 
 ### Route-bound resolver
@@ -536,11 +552,11 @@ against the route-bound organisation without explicit `withOrganisation()`.
 
 ---
 
-## Step 6 - Authorization, Gates, middleware
+## Step 6: Authorization, Gates, middleware
 
 ### `$user->can()` and `Gate::allows()`
 
-These already work in PBAC - the service provider installs a `Gate::before`
+These already work in PBAC — the service provider installs a `Gate::before`
 hook that resolves the ability against `permissions.name`, runs through the
 decision cache, and falls through to native Laravel gates / policies when no
 permission row matches (`gate.fallback_to_laravel_gates = true`).
@@ -555,7 +571,7 @@ Gate::inspect('posts.update', $post);  // Response with code() / message()
 ### Middleware
 
 Spatie ships `role`, `permission`, `role_or_permission` middleware. PBAC does
-not - use Laravel's built-in `can` middleware instead:
+not — use Laravel's built-in `can` middleware instead:
 
 ```diff
 - Route::get('/posts/{post}/edit', …)->middleware('permission:posts.update');
@@ -611,7 +627,7 @@ flow through `Gate` and therefore through PBAC:
 
 ---
 
-## Step 7 - Tests
+## Step 7: Tests
 
 Update factory / seeder usage to drop `guard_name`:
 
@@ -622,7 +638,7 @@ Update factory / seeder usage to drop `guard_name`:
 
 If you assert on cache behaviour, remove explicit
 `app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions()`
-calls - PBAC invalidates its decision cache automatically on model saves and on
+calls — PBAC invalidates its decision cache automatically on model saves and on
 scope enter/exit. There is no persistent permission cache in PBAC's default
 config.
 
@@ -641,14 +657,14 @@ expect($response->code())->toBe('pbac.granted'); // or 'pbac.role_permission_all
 
 ---
 
-## Step 8 - Remove `spatie/laravel-permission`
+## Step 8: Remove `spatie/laravel-permission`
 
 Once application code, routes, views, jobs, and tests are green against PBAC:
 
 1. Drop the Spatie tables (`roles`, `permissions`, `role_has_permissions`,
    `model_has_roles`, `model_has_permissions`) in a follow-up migration.
 2. Optionally rename PBAC tables back to the canonical defaults
-   (`roles`, `permissions`, `role_has_permissions`, `model_has_roles`) - update
+   (`roles`, `permissions`, `role_has_permissions`, `model_has_roles`) — update
    `config/pbac.php` `table_names` and write a `Schema::rename()` migration.
 3. Remove the package:
 
@@ -716,7 +732,7 @@ Pbac::reset();
   equivalent. Either expand to explicit abilities, or wrap with a custom
   `Gate::define()` that checks a prefix against `permissionNames()`.
 - **`$user->givePermissionTo()` after migration.** It compiles (PHP doesn't
-  catch it) only because the method existed on the previous trait - it does
+  catch it) only because the method existed on the previous trait — it does
   **not** exist on PBAC's `HasRoles`. The audit grep in
   [Pre-migration checklist](#pre-migration-checklist) catches this; CI should
   re-run it as a guardrail until the cutover is done.
@@ -728,5 +744,5 @@ Pbac::reset();
 
 If you hit a case this guide doesn't cover, please
 [open an issue](https://github.com/kirchDev/laravel-pbac/issues) with the
-Spatie snippet and the behaviour you need - the rough edges of the migration
+Spatie snippet and the behaviour you need — the rough edges of the migration
 path are exactly what we want to document.
