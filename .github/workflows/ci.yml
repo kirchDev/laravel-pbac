@@ -208,6 +208,14 @@ jobs:
         run: composer update --prefer-dist --no-progress
       - name: Run Pest with coverage
         run: vendor/bin/pest --coverage --coverage-clover=coverage.xml --min=90
+      - name: Fetch Codecov token from Bitwarden
+        uses: bitwarden/sm-action@27c0c9dcab679d7250dbab91227c85b49ffa5e0f # v3.0.0
+        with:
+          access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
+          cloud_region: eu
+          secrets: |
+            dc11814a-a909-411d-9b6a-b4540178ee21 > CODECOV_TOKEN
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
@@ -215,7 +223,7 @@ jobs:
           fail_ci_if_error: false
           flags: pest
           name: codecov-pest
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
 
   lint:
     name: Pint
