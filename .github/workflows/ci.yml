@@ -213,6 +213,9 @@ jobs:
       - name: Run Pest with coverage
         run: vendor/bin/pest --coverage --coverage-clover=coverage.xml --min=90
       - name: Fetch Codecov token from Bitwarden
+        # Dependabot PRs run without access to repository secrets, so the
+        # Bitwarden access token is empty. Skip the token fetch + upload there.
+        if: github.actor != 'dependabot[bot]'
         uses: bitwarden/sm-action@27c0c9dcab679d7250dbab91227c85b49ffa5e0f # v3.0.0
         with:
           access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
@@ -221,6 +224,7 @@ jobs:
             dc11814a-a909-411d-9b6a-b4540178ee21 > CODECOV_TOKEN
 
       - name: Upload coverage to Codecov
+        if: github.actor != 'dependabot[bot]'
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: coverage.xml
