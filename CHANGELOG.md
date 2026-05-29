@@ -9,7 +9,6 @@
 
 ### Features
 
-* add bulk role assignment API and spatie-permission migration command ([794be9e](https://github.com/kirchDev/laravel-pbac/commit/794be9e746a1affab08adc40e93b70be1a76c6b4))
 * add spatie/laravel-permission migration command and bulk role assignment API ([#4](https://github.com/kirchDev/laravel-pbac/issues/4)) ([7e352dc](https://github.com/kirchDev/laravel-pbac/commit/7e352dc76ce51a8eac1d965b706f663e63ea0075))
 * gate pbac:migrate-from-spatie behind an opt-in config flag ([dd36c8d](https://github.com/kirchDev/laravel-pbac/commit/dd36c8d6598fe2bff16b6a601746e8fd5a6010f0))
 * **roles:** require explicit global flag for cross-scope role mutations ([24098be](https://github.com/kirchDev/laravel-pbac/commit/24098bec4d82eb0d7d9049650bebe832edaac44f))
