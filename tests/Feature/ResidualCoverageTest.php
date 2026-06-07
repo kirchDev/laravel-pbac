@@ -98,11 +98,6 @@ it('is a no-op when removeRole is called for a role the user does not have', fun
 });
 
 it('registers Octane reset listeners when the config flag is on', function () {
-    // Pre-define stub event classes so the service provider sees them as registered.
-    if (! class_exists('Laravel\\Octane\\Events\\RequestTerminated')) {
-        eval('namespace Laravel\\Octane\\Events { class RequestTerminated {} class TaskTerminated {} class TickTerminated {} }');
-    }
-
     config()->set('pbac.register_octane_reset_listener', true);
 
     // Re-boot the provider to pick up the new flag.
@@ -113,10 +108,6 @@ it('registers Octane reset listeners when the config flag is on', function () {
 });
 
 it('triggers the Octane reset listener flow when an event fires', function () {
-    if (! class_exists('Laravel\\Octane\\Events\\RequestTerminated')) {
-        eval('namespace Laravel\\Octane\\Events { class RequestTerminated {} class TaskTerminated {} class TickTerminated {} }');
-    }
-
     config()->set('pbac.register_octane_reset_listener', true);
 
     (new PbacServiceProvider(app()))->boot();
@@ -125,7 +116,9 @@ it('triggers the Octane reset listener flow when an event fires', function () {
     Pbac::withOrganisation(7, fn () => null);
     app(OrganisationResolver::class)->setOrganisationId(7);
 
-    event(new RequestTerminated);
+    // The reset listener ignores the event payload, so a bare instance (without
+    // Octane's heavyweight constructor arguments) is enough to exercise the flow.
+    event((new ReflectionClass(RequestTerminated::class))->newInstanceWithoutConstructor());
 
     expect(app(OrganisationResolver::class)->getOrganisationId())->toBeNull();
 });

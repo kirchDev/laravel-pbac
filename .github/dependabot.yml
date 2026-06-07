@@ -6,7 +6,7 @@ updates:
       interval: 'weekly'
     labels:
       - 'dependencies'
-      - 'javascript'
+      - 'area: javascript'
     groups:
       npm-minor-patch:
         patterns:
@@ -21,7 +21,7 @@ updates:
       interval: 'weekly'
     labels:
       - 'dependencies'
-      - 'php'
+      - 'area: php'
     groups:
       composer-minor-patch:
         patterns:
@@ -36,7 +36,7 @@ updates:
       interval: 'monthly'
     labels:
       - 'dependencies'
-      - 'github-actions'
+      - 'area: github-actions'
     groups:
       actions-minor-patch:
         patterns:
