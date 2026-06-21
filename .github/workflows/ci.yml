@@ -28,7 +28,7 @@ on:
       - '.oxfmtrc.json'
       - '.github/workflows/ci.yml'
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     # ready_for_review is required so the dev→main rollup PR (opened as a draft
     # by GITHUB_TOKEN, which triggers no workflows) runs CI once a human marks
     # it ready — otherwise main's required status checks deadlock the rollup.
@@ -183,12 +183,13 @@ jobs:
         run: composer test
 
   coverage:
-    name: Coverage (PCOV → Codecov)
+    name: Coverage (PCOV)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: test
     permissions:
       contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -211,27 +212,24 @@ jobs:
       - name: Install Composer dependencies
         run: composer update --prefer-dist --no-progress
       - name: Run Pest with coverage
-        run: vendor/bin/pest --coverage --coverage-clover=coverage.xml --min=90
-      - name: Fetch Codecov token from Bitwarden
-        # Dependabot PRs run without access to repository secrets, so the
-        # Bitwarden access token is empty. Skip the token fetch + upload there.
-        if: github.actor != 'dependabot[bot]'
-        uses: bitwarden/sm-action@27c0c9dcab679d7250dbab91227c85b49ffa5e0f # v3.0.0
-        with:
-          access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
-          cloud_region: eu
-          secrets: |
-            dc11814a-a909-411d-9b6a-b4540178ee21 > CODECOV_TOKEN
+        # `--min=90` is the coverage gate (fails the run below 90%) — kept local.
+        # Cobertura format (not clover) so CodeCoverageSummary can parse it.
+        run: vendor/bin/pest --coverage --coverage-cobertura=coverage.xml --min=90
 
-      - name: Upload coverage to Codecov
-        if: github.actor != 'dependabot[bot]'
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+      # Post/update a sticky PR comment with the clover summary — no external
+      # service (replaces the Codecov upload). Gate stays `--min=90` above.
+      - name: Coverage summary (markdown)
+        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
         with:
-          files: coverage.xml
-          fail_ci_if_error: false
-          flags: pest
-          name: codecov-pest
-          token: ${{ env.CODECOV_TOKEN }}
+          filename: coverage.xml
+          format: markdown
+          output: file
+      - name: Sticky PR coverage comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
+        with:
+          header: coverage
+          path: code-coverage-results.md
 
   lint:
     name: Pint
