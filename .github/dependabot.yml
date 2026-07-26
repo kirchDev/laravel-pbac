@@ -1,6 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: 'npm'
+    commit-message:
+      prefix: 'fix(deps)'
+      prefix-development: 'chore(deps-dev)'
     directory: '/'
     # Open PRs against the dev branch (the integration branch), not main.
     target-branch: 'dev'
@@ -13,7 +16,7 @@ updates:
       default-days: 3
     labels:
       - 'dependencies'
-      - 'area: javascript'
+      - 'stack: javascript'
     groups:
       npm-minor-patch:
         patterns:
@@ -23,6 +26,9 @@ updates:
           - 'patch'
 
   - package-ecosystem: 'composer'
+    commit-message:
+      prefix: 'fix(deps)'
+      prefix-development: 'chore(deps-dev)'
     directory: '/'
     target-branch: 'dev'
     schedule:
@@ -31,7 +37,7 @@ updates:
       default-days: 3
     labels:
       - 'dependencies'
-      - 'area: php'
+      - 'stack: php'
     groups:
       composer-minor-patch:
         patterns:
@@ -41,6 +47,8 @@ updates:
           - 'patch'
 
   - package-ecosystem: 'github-actions'
+    commit-message:
+      prefix: 'chore(deps)'
     directory: '/'
     target-branch: 'dev'
     schedule:
@@ -49,7 +57,7 @@ updates:
       default-days: 3
     labels:
       - 'dependencies'
-      - 'area: github-actions'
+      - 'stack: github-actions'
     groups:
       actions-minor-patch:
         patterns:
