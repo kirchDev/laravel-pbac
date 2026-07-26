@@ -110,7 +110,7 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite3, pdo_sqlite
           coverage: none
       - name: Cache Composer downloads
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.dependencies }}-${{ hashFiles('composer.json') }}
@@ -171,7 +171,7 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_pgsql
           coverage: none
       - name: Cache Composer downloads
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-pgsql-${{ hashFiles('composer.json') }}
@@ -203,7 +203,7 @@ jobs:
           coverage: pcov
           ini-values: pcov.directory=src
       - name: Cache Composer downloads
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-coverage-${{ hashFiles('composer.json') }}
@@ -246,7 +246,7 @@ jobs:
           php-version: '8.4'
           coverage: none
       - name: Cache Composer downloads
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-pint-${{ hashFiles('composer.json') }}
@@ -273,7 +273,7 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite3, pdo_sqlite
           coverage: none
       - name: Cache Composer downloads
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-larastan-${{ hashFiles('composer.json') }}
