@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.0](https://github.com/kirchDev/laravel-pbac/compare/v0.1.0...v0.2.0) (2026-07-26)
+
+
+### Features
+
+* **ci:** run release-please under the kirchDev Release App ([#6](https://github.com/kirchDev/laravel-pbac/issues/6)) ([870c041](https://github.com/kirchDev/laravel-pbac/commit/870c0419abb427f938e37b431e077a7b78f4957f))
+* route questions, ideas and possible bugs to the Discord forum ([aaaa26c](https://github.com/kirchDev/laravel-pbac/commit/aaaa26c3ea860b354f8fda1d2d21fab7a8d55ce0))
+
+
+### Bug Fixes
+
+* align dependabot labels to the stack: convention ([da00b77](https://github.com/kirchDev/laravel-pbac/commit/da00b7793d120c449989f32303da86438910c393))
+* align issue-template labels with the label catalog ([ce3aa36](https://github.com/kirchDev/laravel-pbac/commit/ce3aa3658565dba1880ed35c2224aedfc844a667))
+* **dependabot:** use area:* labels so Dependabot PRs get labeled ([#17](https://github.com/kirchDev/laravel-pbac/issues/17)) ([4891691](https://github.com/kirchDev/laravel-pbac/commit/489169109f568c807b4619d31e195f42f24a160b))
+
+
+### Documentation
+
+* add AGENTS.md and document AI/skills setup ([9fda05a](https://github.com/kirchDev/laravel-pbac/commit/9fda05a7fb7aea16dace06d34755a87be16f420e))
+* **changelog:** de-duplicate merge-commit entries ([ca2a071](https://github.com/kirchDev/laravel-pbac/commit/ca2a0716bb4f43204add6e5835ff8d0d003930a1))
+
 ## 0.1.0 (2026-05-21)
 
 
