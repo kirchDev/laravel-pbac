@@ -33,27 +33,13 @@ on:
     # by GITHUB_TOKEN, which triggers no workflows) runs CI once a human marks
     # it ready — otherwise main's required status checks deadlock the rollup.
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'config/**'
-      - 'database/**'
-      - '**/*.js'
-      - '**/*.ts'
-      - '**/*.json'
-      - '**/*.jsonc'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.md'
-      - 'composer.json'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'phpstan.neon'
-      - 'phpunit.xml.dist'
-      - 'pint.json'
-      - '.oxlintrc.json'
-      - '.oxfmtrc.json'
-      - '.github/workflows/ci.yml'
+    # Deliberately NO paths filter here (unlike the push trigger above): main's
+    # required status checks ARE this workflow's jobs, so a PR the filter misses
+    # runs no CI at all — its contexts then stay pending forever and the merge is
+    # blocked with nothing that can clear it. The old filter was extension-based,
+    # so `LICENSE`, `.gitignore`, `.nvmrc` and the `.husky/` hooks fell straight
+    # through it. It saved almost nothing either: it already matched `**/*.md`,
+    # `**/*.json`, `**/*.yml` and every source directory.
   workflow_dispatch:
 
 concurrency:
