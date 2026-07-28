@@ -48,7 +48,7 @@
     }
   },
   "docs": {
-    "preset": "library"
+    "preset": "package"
   },
   "work": {
     "tracker": "github",
