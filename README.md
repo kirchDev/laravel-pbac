@@ -142,6 +142,33 @@ final class TenantRouteResolver implements \KirchDev\Pbac\Contracts\Organisation
 
 Wire it via `pbac.organisation.resolver`.
 
+## 🧰 Console commands
+
+Bootstrapping the first administrator is a data operation, not a migration. Two always-registered commands cover it:
+
+```bash
+# Grant a global role
+php artisan pbac:role:assign 1 superadmin --global
+
+# Grant an organisation-bound role, looking the target up by email
+php artisan pbac:role:assign ops@example.com owner --organisation=42 --column=email
+
+# Take it away again
+php artisan pbac:role:revoke 1 superadmin --global
+```
+
+| Option           | What it does                                                                                                     |
+| :--------------- | :--------------------------------------------------------------------------------------------------------------- |
+| `--global`       | Target the global role. Required when organisation scoping is on and the role is not organisation-bound.         |
+| `--organisation` | Target the role bound to this organisation. Mutually exclusive with `--global`.                                  |
+| `--model`        | Fully qualified target model class. Overrides `pbac.models.default_model` and the default guard's auth provider. |
+| `--column`       | Column to look the identifier up on. Defaults to the primary key.                                                |
+
+> [!IMPORTANT]
+> **Scope is never inferred.** While `pbac.organisation.enabled` is on, exactly one of `--global` / `--organisation=` is required — a forgotten flag must not silently grant a global role in production. With the feature off, neither flag applies.
+
+Both commands write through the `HasRoles` trait, so they inherit its strict scope resolution and decision-cache reset; a target model that does not use the trait is rejected rather than written at pivot level. After the change they print the target's resulting role set, which is the verification a bootstrap call needs. An ambiguous `--column` lookup is refused rather than resolved to the first match.
+
 ## 🔍 Decision trace
 
 Wondering _why_ a permission check returned what it did? Turn on tracing:
