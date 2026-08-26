@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/kirchDev/laravel-pbac/compare/v0.2.0...v0.3.0) (2026-08-26)
+
+
+### Features
+
+* **console:** add role assign and revoke commands ([f3d3f4f](https://github.com/kirchDev/laravel-pbac/commit/f3d3f4f3588c87b12c49fb94bcf766d1abc2bdb9)), closes [#36](https://github.com/kirchDev/laravel-pbac/issues/36)
+
+
+### Bug Fixes
+
+* **ci:** let the queue PR body wrap itself ([8070d47](https://github.com/kirchDev/laravel-pbac/commit/8070d47e75879d4fd28b0d0ced8c60a594edda60))
+* **ci:** read the Queue App PEM from this owner's own -ci mirror ([7835150](https://github.com/kirchDev/laravel-pbac/commit/7835150dc39bb8d97ac39413d11ae830b98087de))
+
+
+### Documentation
+
+* **readme:** document the role assign and revoke commands ([16f857f](https://github.com/kirchDev/laravel-pbac/commit/16f857fc754f87fc8a9e12a03f0579a0e8c0f525)), closes [#36](https://github.com/kirchDev/laravel-pbac/issues/36)
+
 ## [0.2.0](https://github.com/kirchDev/laravel-pbac/compare/v0.1.0...v0.2.0) (2026-07-26)
 
 
