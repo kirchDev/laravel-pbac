@@ -19,6 +19,10 @@ return [
     | assignments, and role-permission grants. Applications may replace these
     | classes with their own implementations, for example to use UUID keys.
     |
+    | "default_model" names the model the console commands (pbac:role:assign and
+    | pbac:role:revoke) resolve their target against. When it is null they fall
+    | back to the default guard's auth provider model; --model overrides both.
+    |
     */
 
     'models' => [

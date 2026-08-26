@@ -11,7 +11,9 @@ use Illuminate\Support\ServiceProvider;
 use KirchDev\Pbac\Authorization\DecisionCache;
 use KirchDev\Pbac\Authorization\PbacAuthorizer;
 use KirchDev\Pbac\Authorization\PermissionResolver;
+use KirchDev\Pbac\Console\AssignRoleCommand;
 use KirchDev\Pbac\Console\MigrateFromSpatieCommand;
+use KirchDev\Pbac\Console\RevokeRoleCommand;
 use KirchDev\Pbac\Contracts\Authorizer;
 use KirchDev\Pbac\Contracts\OrganisationResolver;
 use KirchDev\Pbac\Gate\PbacGate;
@@ -59,6 +61,11 @@ class PbacServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
+            $this->commands([
+                AssignRoleCommand::class,
+                RevokeRoleCommand::class,
+            ]);
+
             $this->registerOptionalCommands();
         }
 
