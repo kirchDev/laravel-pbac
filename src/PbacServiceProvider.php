@@ -42,15 +42,11 @@ class PbacServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-
         $this->publishes([
             __DIR__.'/../config/pbac.php' => config_path('pbac.php'),
         ], 'pbac-config');
 
-        $this->publishes([
-            __DIR__.'/../database/migrations' => database_path('migrations'),
-        ], 'pbac-migrations');
+        $this->offerMigrationPublishing();
 
         if ((bool) config('pbac.gate.enabled', true) && (bool) config('pbac.gate.before_hook_enabled', true)) {
             Gate::before(fn ($user, string $ability, array $arguments): mixed => $this->app->make(PbacGate::class)->before($user, $ability, $arguments));
@@ -70,6 +66,51 @@ class PbacServiceProvider extends ServiceProvider
         }
 
         $this->registerPermissionCacheInvalidation();
+    }
+
+    /**
+     * Map every package migration onto the filename it gets inside the consuming application.
+     *
+     * Source files are named `<sequence>_<migration>` — 00001_create_roles_table.php and so on.
+     * The sequence is the package's own running order and never leaves the package: publishing
+     * splits it off and stamps what remains with the publish time, one second per position.
+     * That keeps both pivot tables behind the roles and permissions tables they reference,
+     * while the migrations still land in the consumer's own timeline rather than ours.
+     */
+    private function offerMigrationPublishing(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $sources = glob(__DIR__.'/../database/migrations/*.php') ?: [];
+        sort($sources);
+
+        $publishedAt = time();
+        $paths = [];
+
+        foreach ($sources as $offset => $source) {
+            $name = (string) preg_replace('/^\d+_/', '', basename($source));
+
+            $paths[$source] = $this->publishedMigrationPath($name, $publishedAt + $offset);
+        }
+
+        $this->publishes($paths, 'pbac-migrations');
+    }
+
+    /**
+     * Where a published migration lands.
+     *
+     * An already published copy keeps the filename it has, so re-running the publish never
+     * leaves a consumer with two migrations creating the same table. Only a migration that
+     * is not there yet gets a fresh stamp.
+     */
+    private function publishedMigrationPath(string $name, int $timestamp): string
+    {
+        $directory = database_path('migrations');
+        $existing = glob($directory.DIRECTORY_SEPARATOR.'*_'.$name) ?: [];
+
+        return $existing[0] ?? $directory.DIRECTORY_SEPARATOR.date('Y_m_d_His', $timestamp).'_'.$name;
     }
 
     /**

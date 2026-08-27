@@ -38,18 +38,23 @@ That's it. Tenant-aware authorization in one line, native Laravel `Gate` semanti
 composer require kirchdev/laravel-pbac
 ```
 
-Publish and run the migrations:
+Optionally publish the config:
+
+```bash
+php artisan vendor:publish --tag=pbac-config
+```
+
+Publish and run the migrations. This one-time publish is **required** — the package ships the
+migrations but never loads them, so nothing reaches your schema until you have a copy of your own:
 
 ```bash
 php artisan vendor:publish --tag=pbac-migrations
 php artisan migrate
 ```
 
-Optionally publish the config:
-
-```bash
-php artisan vendor:publish --tag=pbac-config
-```
+> [!IMPORTANT]
+> Set `pbac.keys.*` in the published config **before** you run `migrate` — the migrations read that
+> config at run time and bake the key types into the schema.
 
 ## 🚀 Quick start
 
@@ -263,6 +268,45 @@ composer larastan   # Larastan / PHPStan
 ```
 
 The test suite runs via Testbench + in-memory SQLite — no host app required.
+
+## ⬆️ Upgrading
+
+### Migrations are publish-only (breaking)
+
+The service provider no longer calls `loadMigrationsFrom()`. The migrations reach your application
+through the `pbac-migrations` tag only, so schema changes are reviewed in your repository instead of
+arriving with a `composer update`.
+
+Publish them once before your next deploy:
+
+```bash
+php artisan vendor:publish --tag=pbac-migrations
+```
+
+Published copies are stamped with the moment you publish them, so they slot into your own migration
+timeline rather than carrying the package's dates into your repository.
+
+**If you already published them** from an earlier release, this is a no-op: publishing reuses the
+filenames you already have, so nothing is duplicated and `php artisan migrate` finds nothing new.
+
+**If you relied on the auto-load and never published**, your database already has the pbac tables,
+but it recorded them under the package's own filenames — and the freshly published copies carry new
+ones. Laravel would treat them as unrun and try to create tables that already exist. Record them as
+run without running them, once, right after publishing:
+
+```bash
+php artisan tinker --execute="
+    \$repository = app('migration.repository');
+    \$batch = \$repository->getNextBatchNumber();
+    foreach (['roles', 'permissions', 'role_has_permissions', 'model_has_roles'] as \$table) {
+        foreach (glob(database_path(\"migrations/*_create_{\$table}_table.php\")) as \$file) {
+            \$repository->log(basename(\$file, '.php'), \$batch);
+        }
+    }
+"
+```
+
+Then verify with `php artisan migrate:status` that all four report as run before your next deploy.
 
 ## 🤝 Contributing
 

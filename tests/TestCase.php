@@ -64,7 +64,24 @@ abstract class TestCase extends OrchestraTestCase
         // migrate:fresh rather than migrate so persistent drivers (e.g. PostgreSQL in CI)
         // get a clean schema per test; in-memory SQLite is already fresh per process.
         $this->artisan('migrate:fresh')->run();
+        $this->migratePackageMigrations();
         $this->createFixtureTables();
+    }
+
+    /**
+     * Run the package's own migrations.
+     *
+     * The service provider deliberately does not call loadMigrationsFrom(): migrations are
+     * publish-only for consumers, so the suite has to run them from the package path itself.
+     * Using --path (rather than registering the path with the migrator) keeps the suite honest
+     * about what a consuming application sees from the provider alone.
+     */
+    protected function migratePackageMigrations(): void
+    {
+        $this->artisan('migrate', [
+            '--path' => realpath(__DIR__.'/../database/migrations'),
+            '--realpath' => true,
+        ])->run();
     }
 
     private function createFixtureTables(): void
