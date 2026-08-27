@@ -47,11 +47,13 @@ it('offers every package migration under the pbac-migrations tag', function () {
     $sources = array_map(static fn (string $path): string => basename($path), array_keys($published));
     sort($sources);
 
+    // The sequence prefix is the package's running order and is stripped on publish, so it has
+    // to stay in step with the dependency order asserted below.
     expect($sources)->toBe([
-        '2026_05_09_000001_create_roles_table.php',
-        '2026_05_09_000002_create_permissions_table.php',
-        '2026_05_09_000003_create_role_has_permissions_table.php',
-        '2026_05_09_000004_create_model_has_roles_table.php',
+        '00001_create_roles_table.php',
+        '00002_create_permissions_table.php',
+        '00003_create_role_has_permissions_table.php',
+        '00004_create_model_has_roles_table.php',
     ]);
 
     foreach ($published as $source => $target) {

@@ -21,23 +21,6 @@ use KirchDev\Pbac\Queries\RolePermissionQuery;
 
 class PbacServiceProvider extends ServiceProvider
 {
-    /**
-     * The package's migrations, in the order they have to run: both pivot tables carry
-     * foreign keys to roles and permissions, so those two tables must exist first.
-     *
-     * Published filenames are stamped at publish time, so this list — not the source
-     * filenames — is what fixes the order a consumer's migrator ends up seeing. Each
-     * entry is published one second after the one before it.
-     *
-     * @var list<string>
-     */
-    private const MIGRATIONS = [
-        '2026_05_09_000001_create_roles_table.php',
-        '2026_05_09_000002_create_permissions_table.php',
-        '2026_05_09_000003_create_role_has_permissions_table.php',
-        '2026_05_09_000004_create_model_has_roles_table.php',
-    ];
-
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/pbac.php', 'pbac');
@@ -88,9 +71,11 @@ class PbacServiceProvider extends ServiceProvider
     /**
      * Map every package migration onto the filename it gets inside the consuming application.
      *
-     * The migrations are never loaded from the package, so the published copy is the only one
-     * that ever runs. Each is stamped with the publish time, one second apart in MIGRATIONS
-     * order, which is what keeps the foreign keys resolvable when the consumer migrates.
+     * Source files are named `<sequence>_<migration>` — 00001_create_roles_table.php and so on.
+     * The sequence is the package's own running order and never leaves the package: publishing
+     * splits it off and stamps what remains with the publish time, one second per position.
+     * That keeps both pivot tables behind the roles and permissions tables they reference,
+     * while the migrations still land in the consumer's own timeline rather than ours.
      */
     private function offerMigrationPublishing(): void
     {
@@ -98,16 +83,16 @@ class PbacServiceProvider extends ServiceProvider
             return;
         }
 
+        $sources = glob(__DIR__.'/../database/migrations/*.php') ?: [];
+        sort($sources);
+
         $publishedAt = time();
         $paths = [];
 
-        foreach (self::MIGRATIONS as $offset => $migration) {
-            $name = (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $migration);
+        foreach ($sources as $offset => $source) {
+            $name = (string) preg_replace('/^\d+_/', '', basename($source));
 
-            $paths[__DIR__.'/../database/migrations/'.$migration] = $this->publishedMigrationPath(
-                $name,
-                $publishedAt + $offset,
-            );
+            $paths[$source] = $this->publishedMigrationPath($name, $publishedAt + $offset);
         }
 
         $this->publishes($paths, 'pbac-migrations');
