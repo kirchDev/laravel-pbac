@@ -38,18 +38,23 @@ That's it. Tenant-aware authorization in one line, native Laravel `Gate` semanti
 composer require kirchdev/laravel-pbac
 ```
 
-Publish and run the migrations:
+Optionally publish the config:
+
+```bash
+php artisan vendor:publish --tag=pbac-config
+```
+
+Publish and run the migrations. This one-time publish is **required** — the package ships the
+migrations but never loads them, so nothing reaches your schema until you have a copy of your own:
 
 ```bash
 php artisan vendor:publish --tag=pbac-migrations
 php artisan migrate
 ```
 
-Optionally publish the config:
-
-```bash
-php artisan vendor:publish --tag=pbac-config
-```
+> [!IMPORTANT]
+> Set `pbac.keys.*` in the published config **before** you run `migrate` — the migrations read that
+> config at run time and bake the key types into the schema.
 
 ## 🚀 Quick start
 
@@ -263,6 +268,24 @@ composer larastan   # Larastan / PHPStan
 ```
 
 The test suite runs via Testbench + in-memory SQLite — no host app required.
+
+## ⬆️ Upgrading
+
+### Migrations are publish-only (breaking)
+
+The service provider no longer calls `loadMigrationsFrom()`. The migrations reach your application
+through the `pbac-migrations` tag only, so schema changes are reviewed in your repository instead of
+arriving with a `composer update`.
+
+If you have already published them, this is a no-op — your copies in `database/migrations` were
+already shadowing the package's. Otherwise, publish them once before your next deploy:
+
+```bash
+php artisan vendor:publish --tag=pbac-migrations
+```
+
+The filenames are unchanged, so migrations you have already run stay recorded as run and
+`php artisan migrate` finds nothing new.
 
 ## 🤝 Contributing
 

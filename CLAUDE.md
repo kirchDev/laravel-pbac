@@ -63,4 +63,5 @@ Models in `src/Models/` (`Role`, `Permission`, `RoleAssignment`, `RolePermission
 - `pbac.keys.*` (id / uuid / ulid) must be set **before** running the published migrations — the migration files read config at run time.
 - All container bindings are `scoped`, not `singleton`. If you add a new stateful service, use `scoped` and make it implement `Contracts\Resettable` if it caches anything across a request.
 - `PbacAuthorizer::inspect()` returns `?Decision` — a `null` return means "I don't manage this ability, let Laravel handle it." Don't conflate that with "deny."
-- Tests use Testbench; there is no `bootstrap/app.php`. Add new test setup to `tests/TestCase.php` / `tests/Pest.php`.
+- Migrations are **publish-only**: `PbacServiceProvider` deliberately does not call `loadMigrationsFrom()`, so consumers get schema changes only via `vendor:publish --tag=pbac-migrations`. Keep `publishes()` — `publishesMigrations()` re-stamps filenames and would re-run migrations consumers have already run.
+- Tests use Testbench; there is no `bootstrap/app.php`. Add new test setup to `tests/TestCase.php` / `tests/Pest.php`. Because the provider loads no migrations, the suite runs them itself in `TestCase::migratePackageMigrations()` — a test that calls `migrate:fresh` must call it again afterwards.
