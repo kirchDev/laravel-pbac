@@ -42,8 +42,6 @@ class PbacServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-
         $this->publishes([
             __DIR__.'/../config/pbac.php' => config_path('pbac.php'),
         ], 'pbac-config');

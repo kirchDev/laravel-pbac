@@ -21,7 +21,8 @@ beforeEach(function () {
     Schema::dropIfExists('permissions');
     Schema::dropIfExists('roles');
 
-    $this->artisan('migrate:fresh');
+    $this->artisan('migrate:fresh')->run();
+    $this->migratePackageMigrations();
 
     Schema::create('permissions', function (Blueprint $table) {
         $table->id();
