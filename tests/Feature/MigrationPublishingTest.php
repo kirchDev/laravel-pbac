@@ -6,6 +6,20 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use KirchDev\Pbac\PbacServiceProvider;
 
+/**
+ * Strip the timestamp a published migration carries, leaving the part that identifies
+ * which table it creates.
+ */
+function pbacMigrationTable(string $file): string
+{
+    return (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', basename($file));
+}
+
+function pbacPublishedMigrations(): array
+{
+    return ServiceProvider::pathsToPublish(PbacServiceProvider::class, 'pbac-migrations');
+}
+
 it('registers no migration path with the migrator', function () {
     $packagePath = realpath(__DIR__.'/../../database/migrations');
 
@@ -25,35 +39,66 @@ it('creates no pbac tables for an application that has not published the migrati
     }
 });
 
-it('publishes the migrations under the pbac-migrations tag', function () {
-    $paths = ServiceProvider::pathsToPublish(PbacServiceProvider::class, 'pbac-migrations');
+it('offers every package migration under the pbac-migrations tag', function () {
+    $published = pbacPublishedMigrations();
 
-    expect($paths)->toHaveCount(1);
+    expect($published)->toHaveCount(4);
 
-    $source = (string) array_key_first($paths);
+    $sources = array_map(static fn (string $path): string => basename($path), array_keys($published));
+    sort($sources);
 
-    expect(realpath($source))->toBe(realpath(__DIR__.'/../../database/migrations'))
-        ->and($paths[$source])->toBe(database_path('migrations'));
-});
-
-it('publishes the migrations under their original filenames', function () {
-    // Consumers already have these recorded in their `migrations` table. Re-stamping them —
-    // what publishesMigrations() does — would make Laravel treat them as unrun and re-issue
-    // CREATE TABLE against tables that already exist.
-    $restamped = array_map(
-        static fn (string $path): string => realpath($path) ?: $path,
-        ServiceProvider::publishableMigrationPaths(),
-    );
-
-    expect($restamped)->not->toContain(realpath(__DIR__.'/../../database/migrations'));
-
-    $files = array_map('basename', glob(__DIR__.'/../../database/migrations/*.php') ?: []);
-    sort($files);
-
-    expect($files)->toBe([
+    expect($sources)->toBe([
         '2026_05_09_000001_create_roles_table.php',
         '2026_05_09_000002_create_permissions_table.php',
         '2026_05_09_000003_create_role_has_permissions_table.php',
         '2026_05_09_000004_create_model_has_roles_table.php',
     ]);
+
+    foreach ($published as $source => $target) {
+        expect(is_file($source))->toBeTrue()
+            ->and(dirname($target))->toBe(database_path('migrations'))
+            ->and(basename($target))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_create_\w+_table\.php$/');
+    }
+});
+
+it('publishes the migrations in dependency order', function () {
+    // The pivot tables carry foreign keys to roles and permissions. Publishing them all under
+    // one timestamp would leave the migrator sorting them alphabetically, which puts
+    // create_model_has_roles_table first and breaks the foreign key. The stamps must differ.
+    $targets = array_map(static fn (string $path): string => basename($path), array_values(pbacPublishedMigrations()));
+
+    sort($targets);
+
+    expect(array_map('pbacMigrationTable', $targets))->toBe([
+        'create_roles_table.php',
+        'create_permissions_table.php',
+        'create_role_has_permissions_table.php',
+        'create_model_has_roles_table.php',
+    ]);
+});
+
+it('reuses an already published migration instead of stamping a second copy', function () {
+    $database = sys_get_temp_dir().'/pbac-publish-'.bin2hex(random_bytes(6));
+    mkdir($database.'/migrations', 0o777, true);
+
+    $existing = $database.'/migrations/2020_01_01_000000_create_roles_table.php';
+    touch($existing);
+
+    $this->app->useDatabasePath($database);
+    (new PbacServiceProvider($this->app))->boot();
+
+    $published = pbacPublishedMigrations();
+
+    $roles = null;
+    foreach ($published as $source => $target) {
+        if (str_ends_with($source, '_create_roles_table.php')) {
+            $roles = $target;
+        }
+    }
+
+    expect($roles)->toBe($existing);
+
+    unlink($existing);
+    rmdir($database.'/migrations');
+    rmdir($database);
 });

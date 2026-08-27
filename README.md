@@ -277,15 +277,36 @@ The service provider no longer calls `loadMigrationsFrom()`. The migrations reac
 through the `pbac-migrations` tag only, so schema changes are reviewed in your repository instead of
 arriving with a `composer update`.
 
-If you have already published them, this is a no-op — your copies in `database/migrations` were
-already shadowing the package's. Otherwise, publish them once before your next deploy:
+Publish them once before your next deploy:
 
 ```bash
 php artisan vendor:publish --tag=pbac-migrations
 ```
 
-The filenames are unchanged, so migrations you have already run stay recorded as run and
-`php artisan migrate` finds nothing new.
+Published copies are stamped with the moment you publish them, so they slot into your own migration
+timeline rather than carrying the package's dates into your repository.
+
+**If you already published them** from an earlier release, this is a no-op: publishing reuses the
+filenames you already have, so nothing is duplicated and `php artisan migrate` finds nothing new.
+
+**If you relied on the auto-load and never published**, your database already has the pbac tables,
+but it recorded them under the package's own filenames — and the freshly published copies carry new
+ones. Laravel would treat them as unrun and try to create tables that already exist. Record them as
+run without running them, once, right after publishing:
+
+```bash
+php artisan tinker --execute="
+    \$repository = app('migration.repository');
+    \$batch = \$repository->getNextBatchNumber();
+    foreach (['roles', 'permissions', 'role_has_permissions', 'model_has_roles'] as \$table) {
+        foreach (glob(database_path(\"migrations/*_create_{\$table}_table.php\")) as \$file) {
+            \$repository->log(basename(\$file, '.php'), \$batch);
+        }
+    }
+"
+```
+
+Then verify with `php artisan migrate:status` that all four report as run before your next deploy.
 
 ## 🤝 Contributing
 

@@ -21,6 +21,23 @@ use KirchDev\Pbac\Queries\RolePermissionQuery;
 
 class PbacServiceProvider extends ServiceProvider
 {
+    /**
+     * The package's migrations, in the order they have to run: both pivot tables carry
+     * foreign keys to roles and permissions, so those two tables must exist first.
+     *
+     * Published filenames are stamped at publish time, so this list — not the source
+     * filenames — is what fixes the order a consumer's migrator ends up seeing. Each
+     * entry is published one second after the one before it.
+     *
+     * @var list<string>
+     */
+    private const MIGRATIONS = [
+        '2026_05_09_000001_create_roles_table.php',
+        '2026_05_09_000002_create_permissions_table.php',
+        '2026_05_09_000003_create_role_has_permissions_table.php',
+        '2026_05_09_000004_create_model_has_roles_table.php',
+    ];
+
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/pbac.php', 'pbac');
@@ -46,9 +63,7 @@ class PbacServiceProvider extends ServiceProvider
             __DIR__.'/../config/pbac.php' => config_path('pbac.php'),
         ], 'pbac-config');
 
-        $this->publishes([
-            __DIR__.'/../database/migrations' => database_path('migrations'),
-        ], 'pbac-migrations');
+        $this->offerMigrationPublishing();
 
         if ((bool) config('pbac.gate.enabled', true) && (bool) config('pbac.gate.before_hook_enabled', true)) {
             Gate::before(fn ($user, string $ability, array $arguments): mixed => $this->app->make(PbacGate::class)->before($user, $ability, $arguments));
@@ -68,6 +83,49 @@ class PbacServiceProvider extends ServiceProvider
         }
 
         $this->registerPermissionCacheInvalidation();
+    }
+
+    /**
+     * Map every package migration onto the filename it gets inside the consuming application.
+     *
+     * The migrations are never loaded from the package, so the published copy is the only one
+     * that ever runs. Each is stamped with the publish time, one second apart in MIGRATIONS
+     * order, which is what keeps the foreign keys resolvable when the consumer migrates.
+     */
+    private function offerMigrationPublishing(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $publishedAt = time();
+        $paths = [];
+
+        foreach (self::MIGRATIONS as $offset => $migration) {
+            $name = (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $migration);
+
+            $paths[__DIR__.'/../database/migrations/'.$migration] = $this->publishedMigrationPath(
+                $name,
+                $publishedAt + $offset,
+            );
+        }
+
+        $this->publishes($paths, 'pbac-migrations');
+    }
+
+    /**
+     * Where a published migration lands.
+     *
+     * An already published copy keeps the filename it has, so re-running the publish never
+     * leaves a consumer with two migrations creating the same table. Only a migration that
+     * is not there yet gets a fresh stamp.
+     */
+    private function publishedMigrationPath(string $name, int $timestamp): string
+    {
+        $directory = database_path('migrations');
+        $existing = glob($directory.DIRECTORY_SEPARATOR.'*_'.$name) ?: [];
+
+        return $existing[0] ?? $directory.DIRECTORY_SEPARATOR.date('Y_m_d_His', $timestamp).'_'.$name;
     }
 
     /**
