@@ -18,6 +18,7 @@ use KirchDev\Pbac\Contracts\Authorizer;
 use KirchDev\Pbac\Contracts\OrganisationResolver;
 use KirchDev\Pbac\Gate\PbacGate;
 use KirchDev\Pbac\Queries\RolePermissionQuery;
+use KirchDev\Pbac\Support\PackageMigrations;
 
 class PbacServiceProvider extends ServiceProvider
 {
@@ -69,13 +70,9 @@ class PbacServiceProvider extends ServiceProvider
     }
 
     /**
-     * Map every package migration onto the filename it gets inside the consuming application.
+     * Offer the migrations under names generated for the consuming application.
      *
-     * Source files are named `<sequence>_<migration>` — 00001_create_roles_table.php and so on.
-     * The sequence is the package's own running order and never leaves the package: publishing
-     * splits it off and stamps what remains with the publish time, one second per position.
-     * That keeps both pivot tables behind the roles and permissions tables they reference,
-     * while the migrations still land in the consumer's own timeline rather than ours.
+     * The naming rules live in PackageMigrations so the provider stays about wiring.
      */
     private function offerMigrationPublishing(): void
     {
@@ -83,34 +80,10 @@ class PbacServiceProvider extends ServiceProvider
             return;
         }
 
-        $sources = glob(__DIR__.'/../database/migrations/*.php') ?: [];
-        sort($sources);
-
-        $publishedAt = time();
-        $paths = [];
-
-        foreach ($sources as $offset => $source) {
-            $name = (string) preg_replace('/^\d+_/', '', basename($source));
-
-            $paths[$source] = $this->publishedMigrationPath($name, $publishedAt + $offset);
-        }
-
-        $this->publishes($paths, 'pbac-migrations');
-    }
-
-    /**
-     * Where a published migration lands.
-     *
-     * An already published copy keeps the filename it has, so re-running the publish never
-     * leaves a consumer with two migrations creating the same table. Only a migration that
-     * is not there yet gets a fresh stamp.
-     */
-    private function publishedMigrationPath(string $name, int $timestamp): string
-    {
-        $directory = database_path('migrations');
-        $existing = glob($directory.DIRECTORY_SEPARATOR.'*_'.$name) ?: [];
-
-        return $existing[0] ?? $directory.DIRECTORY_SEPARATOR.date('Y_m_d_His', $timestamp).'_'.$name;
+        $this->publishes(
+            PackageMigrations::publishMap(__DIR__.'/../database/migrations'),
+            'pbac-migrations',
+        );
     }
 
     /**
