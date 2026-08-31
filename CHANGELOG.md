@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.0](https://github.com/kirchDev/laravel-pbac/compare/v0.4.0...v0.5.0) (2026-08-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **migrations:** KirchDev\Pbac\Support\PackageMigrations is removed and PbacServiceProvider now extends Spatie\LaravelPackageTools\PackageServiceProvider. Code that booted the provider by hand must call register() before boot(). The package's own migration filenames changed; consumers only ever see the published names, which are unchanged.
+
+### Bug Fixes
+
+* **deps:** require laravel-package-tools 1.93.1 for the migration reuse rule ([36b7162](https://github.com/kirchDev/laravel-pbac/commit/36b71621fe62180465e2b93b066c7b5a59ee6c71)), closes [#43](https://github.com/kirchDev/laravel-pbac/issues/43)
+
+
+### Performance
+
+* **migrations:** skip the publish map outside the console ([a74da35](https://github.com/kirchDev/laravel-pbac/commit/a74da35c269628777b58d344fb34a1e5944c64ca)), closes [#43](https://github.com/kirchDev/laravel-pbac/issues/43)
+
+
+### Refactor
+
+* **migrations:** publish migrations through spatie/laravel-package-tools ([e32a141](https://github.com/kirchDev/laravel-pbac/commit/e32a141bd3c1fc6a30335057a0fb5fcbe28a81dc))
+
 ## [0.4.0](https://github.com/kirchDev/laravel-pbac/compare/v0.3.0...v0.4.0) (2026-08-27)
 
 
