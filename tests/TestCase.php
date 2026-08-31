@@ -61,6 +61,19 @@ abstract class TestCase extends OrchestraTestCase
     {
         parent::setUp();
 
+        $this->restoreBaselineSchema();
+    }
+
+    /**
+     * The schema every test starts from: a clean database, the package's own migrations and
+     * the fixture tables.
+     *
+     * A test that tears this down — migrate:fresh drops the host tables too, and the package
+     * migrations carry foreign keys into them — calls this again rather than re-running the
+     * package path alone, which would leave those foreign keys pointing at nothing.
+     */
+    protected function restoreBaselineSchema(): void
+    {
         // migrate:fresh rather than migrate so persistent drivers (e.g. PostgreSQL in CI)
         // get a clean schema per test; in-memory SQLite is already fresh per process.
         $this->artisan('migrate:fresh')->run();

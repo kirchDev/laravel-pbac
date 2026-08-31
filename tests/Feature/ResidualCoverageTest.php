@@ -100,9 +100,10 @@ it('is a no-op when removeRole is called for a role the user does not have', fun
 it('registers Octane reset listeners when the config flag is on', function () {
     config()->set('pbac.register_octane_reset_listener', true);
 
-    // Re-boot the provider to pick up the new flag.
+    // Re-boot the provider to pick up the new flag. register() first: PackageServiceProvider
+    // builds its Package there, and boot() reads it.
     $provider = new PbacServiceProvider(app());
-    $provider->boot();
+    $provider->register()->boot();
 
     expect(true)->toBeTrue(); // smoke — no exception means the listener path executed
 });
@@ -110,7 +111,7 @@ it('registers Octane reset listeners when the config flag is on', function () {
 it('triggers the Octane reset listener flow when an event fires', function () {
     config()->set('pbac.register_octane_reset_listener', true);
 
-    (new PbacServiceProvider(app()))->boot();
+    (new PbacServiceProvider(app()))->register()->boot();
 
     // Resolve PbacManager so the listener's `resolved('pbac')` guard passes.
     Pbac::withOrganisation(7, fn () => null);
