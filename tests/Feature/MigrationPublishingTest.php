@@ -140,11 +140,10 @@ it('creates no package tables for an application that has not published the migr
         expect(Schema::hasTable($table))->toBeFalse();
     }
 
-    // The suite runs the package migrations itself; migrate:fresh above dropped them.
-    $this->artisan('migrate', [
-        '--path' => packageMigrationPath(),
-        '--realpath' => true,
-    ])->run();
+    // migrate:fresh dropped the suite's whole baseline, the host tables included — and the
+    // package migrations carry foreign keys into those. Rebuild all of it, not just the
+    // package path, or a persistent driver hands the wreckage to the next test.
+    $this->restoreBaselineSchema();
 });
 
 it('migrates the package tables from the package migration path in the test suite', function () {
