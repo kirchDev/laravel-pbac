@@ -7,7 +7,6 @@ namespace KirchDev\Pbac;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\ServiceProvider;
 use KirchDev\Pbac\Authorization\DecisionCache;
 use KirchDev\Pbac\Authorization\PbacAuthorizer;
 use KirchDev\Pbac\Authorization\PermissionResolver;
@@ -18,14 +17,32 @@ use KirchDev\Pbac\Contracts\Authorizer;
 use KirchDev\Pbac\Contracts\OrganisationResolver;
 use KirchDev\Pbac\Gate\PbacGate;
 use KirchDev\Pbac\Queries\RolePermissionQuery;
-use KirchDev\Pbac\Support\PackageMigrations;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
 
-class PbacServiceProvider extends ServiceProvider
+class PbacServiceProvider extends PackageServiceProvider
 {
-    public function register(): void
+    /**
+     * The package's shape: the config file, the always-on commands and the migrations.
+     *
+     * Migrations are discovered from database/migrations rather than listed here, so the
+     * running order lives in the filenames and adding one is a single file. They are named
+     * with Laravel's own sentinel date (0001_01_01_000001_create_roles_table.php): the
+     * publish strips that prefix and stamps its own, and in the meantime it keeps the source
+     * files sorting in dependency order for the suite, which migrates them from the package
+     * path. runsMigrations() stays off — consumers publish, the provider never auto-loads.
+     */
+    public function configurePackage(Package $package): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/pbac.php', 'pbac');
+        $package
+            ->name('laravel-pbac')
+            ->hasConfigFile()
+            ->hasCommands(AssignRoleCommand::class, RevokeRoleCommand::class)
+            ->discoversMigrations();
+    }
 
+    public function packageRegistered(): void
+    {
         $this->app->scoped(OrganisationResolver::class, function ($app): OrganisationResolver {
             $resolver = $app['config']->get('pbac.organisation.resolver');
 
@@ -41,14 +58,8 @@ class PbacServiceProvider extends ServiceProvider
         $this->app->alias(PbacManager::class, 'pbac');
     }
 
-    public function boot(): void
+    public function packageBooted(): void
     {
-        $this->publishes([
-            __DIR__.'/../config/pbac.php' => config_path('pbac.php'),
-        ], 'pbac-config');
-
-        $this->offerMigrationPublishing();
-
         if ((bool) config('pbac.gate.enabled', true) && (bool) config('pbac.gate.before_hook_enabled', true)) {
             Gate::before(fn ($user, string $ability, array $arguments): mixed => $this->app->make(PbacGate::class)->before($user, $ability, $arguments));
         }
@@ -58,32 +69,10 @@ class PbacServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                AssignRoleCommand::class,
-                RevokeRoleCommand::class,
-            ]);
-
             $this->registerOptionalCommands();
         }
 
         $this->registerPermissionCacheInvalidation();
-    }
-
-    /**
-     * Offer the migrations under names generated for the consuming application.
-     *
-     * The naming rules live in PackageMigrations so the provider stays about wiring.
-     */
-    private function offerMigrationPublishing(): void
-    {
-        if (! $this->app->runningInConsole()) {
-            return;
-        }
-
-        $this->publishes(
-            PackageMigrations::publishMap(__DIR__.'/../database/migrations'),
-            'pbac-migrations',
-        );
     }
 
     /**
@@ -107,6 +96,10 @@ class PbacServiceProvider extends ServiceProvider
         $permissionModel::deleted($flush);
     }
 
+    /**
+     * The one command configurePackage() cannot carry: hasCommands() registers
+     * unconditionally, and this one is gated on config.
+     */
     private function registerOptionalCommands(): void
     {
         $commands = [];

@@ -6,7 +6,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use KirchDev\Pbac\PbacServiceProvider;
-use KirchDev\Pbac\Support\PackageMigrations;
 
 /**
  * The directory the package keeps its own migrations in.
@@ -19,7 +18,7 @@ function packageMigrationPath(): string
 }
 
 /**
- * The package's source migrations, in the order their sequence prefix prescribes.
+ * The package's source migrations, in the order their filenames prescribe.
  *
  * @return list<string>
  */
@@ -55,6 +54,33 @@ function publishedMigrations(): array
 }
 
 /**
+ * laravel-package-tools builds its target as `migrations/` . dirname($name) . `/`, and
+ * dirname() of a bare filename is '.' — so every published path carries a literal '/./'.
+ * The copy resolves it away; an assertion should not have to.
+ */
+function normalisePath(string $path): string
+{
+    return str_replace('/./', '/', $path);
+}
+
+/**
+ * The publish map keyed by the source migration's filename, since the provider keys it by
+ * its own unnormalised source paths.
+ *
+ * @return array<string, string>
+ */
+function publishedBySource(): array
+{
+    $map = [];
+
+    foreach (publishedMigrations() as $source => $target) {
+        $map[basename($source)] = normalisePath($target);
+    }
+
+    return $map;
+}
+
+/**
  * Strip the timestamp a published migration carries, leaving the part that identifies
  * which table it creates.
  */
@@ -64,19 +90,23 @@ function publishedMigrationName(string $file): string
 }
 
 /**
- * A throwaway directory, so a source migration can be renamed or added without touching
- * the package.
+ * Point the application at a throwaway database path holding the migrations a consumer has
+ * already published, then boot a fresh provider against it. Returns the temporary path; the
+ * publish map it produced is read back through publishedMigrations().
  */
-function makeTemporaryDirectory(string ...$files): string
+function publishAgainst(Application $app, string ...$alreadyPublished): string
 {
-    $directory = sys_get_temp_dir().'/package-migrations-'.bin2hex(random_bytes(6));
-    mkdir($directory, 0o777, true);
+    $database = sys_get_temp_dir().'/package-migrations-'.bin2hex(random_bytes(6));
+    mkdir($database.'/migrations', 0o777, true);
 
-    foreach ($files as $file) {
-        touch($directory.'/'.$file);
+    foreach ($alreadyPublished as $file) {
+        touch($database.'/migrations/'.$file);
     }
 
-    return $directory;
+    $app->useDatabasePath($database);
+    (new PbacServiceProvider($app))->register()->boot();
+
+    return $database;
 }
 
 function removeTemporaryDirectory(string $directory): void
@@ -88,31 +118,19 @@ function removeTemporaryDirectory(string $directory): void
     rmdir($directory);
 }
 
-/**
- * Point the application at a throwaway database path holding the migrations a consumer has
- * already published, so a publish run can be watched against a consumer's tree.
- */
-function useTemporaryDatabasePath(Application $app, string ...$published): string
-{
-    $database = makeTemporaryDirectory();
-    mkdir($database.'/migrations', 0o777, true);
-
-    foreach ($published as $file) {
-        touch($database.'/migrations/'.$file);
-    }
-
-    $app->useDatabasePath($database);
-
-    return $database;
-}
-
 it('registers no migration path with the migrator', function () {
     $registered = array_map(
         static fn (string $path): string => realpath($path) ?: $path,
         app('migrator')->paths(),
     );
 
+    // Neither the directory nor any single source file: runsMigrations() registers the files
+    // one by one, which a directory-only check would sail straight past.
     expect($registered)->not->toContain(packageMigrationPath());
+
+    foreach (packageMigrationSources() as $source) {
+        expect($registered)->not->toContain($source);
+    }
 });
 
 it('creates no package tables for an application that has not published the migrations', function () {
@@ -143,18 +161,16 @@ it('offers every package migration under the publish tag', function () {
     $sources = array_map(static fn (string $path): string => basename($path), array_keys($published));
     sort($sources);
 
-    // The sequence prefix is the package's running order and is stripped on publish, so it has
-    // to stay in step with the dependency order asserted below.
     expect($sources)->toBe([
-        '00001_create_roles_table.php',
-        '00002_create_permissions_table.php',
-        '00003_create_role_has_permissions_table.php',
-        '00004_create_model_has_roles_table.php',
+        '0001_01_01_000001_create_roles_table.php',
+        '0001_01_01_000002_create_permissions_table.php',
+        '0001_01_01_000003_create_role_has_permissions_table.php',
+        '0001_01_01_000004_create_model_has_roles_table.php',
     ]);
 
     foreach ($published as $source => $target) {
         expect(is_file($source))->toBeTrue()
-            ->and(dirname($target))->toBe(database_path('migrations'))
+            ->and(dirname(normalisePath($target)))->toBe(database_path('migrations'))
             ->and(basename($target))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_create_\w+_table\.php$/');
     }
 });
@@ -175,39 +191,14 @@ it('publishes the migrations in dependency order', function () {
     ]);
 });
 
-it('names every source migration with a zero-padded sequence prefix', function () {
-    // The publish order comes out of sort(), which is a string sort. An unpadded prefix would
-    // silently reorder the package's own migrations, so every source carries the same width.
-    $prefixes = array_map(
-        static fn (string $path): string => explode('_', basename($path))[0],
-        packageMigrationSources(),
-    );
-
-    expect($prefixes)->each->toMatch('/^\d{5}$/');
-});
-
-it('keeps the publish order once the sequence prefix reaches double digits', function () {
-    $padded = makeTemporaryDirectory('00003_create_third_table.php', '00010_create_tenth_table.php');
-    $unpadded = makeTemporaryDirectory('3_create_third_table.php', '10_create_tenth_table.php');
-
-    $order = static fn (string $directory): array => array_map(
-        'publishedMigrationName',
-        array_values(PackageMigrations::publishMap($directory, 1_600_000_000)),
-    );
-
-    expect($order($padded))->toBe([
-        'create_third_table.php',
-        'create_tenth_table.php',
-    ]);
-
-    // Without the padding the same two publish the other way round: '10_' sorts before '3_'.
-    expect($order($unpadded))->toBe([
-        'create_tenth_table.php',
-        'create_third_table.php',
-    ]);
-
-    removeTemporaryDirectory($padded);
-    removeTemporaryDirectory($unpadded);
+it('names every source migration with a timestamp prefix the publish strips', function () {
+    // Two things ride on the prefix. The publish strips exactly this shape before stamping its
+    // own, and until then it is what sorts the sources — the suite migrates them straight from
+    // the package path, where an unprefixed name would run before create_roles_table exists.
+    // The date is Laravel's own sentinel: it orders, it does not claim a day.
+    foreach (packageMigrationSources() as $source) {
+        expect(basename($source))->toMatch('/^0001_01_01_\d{6}_create_\w+_table\.php$/');
+    }
 });
 
 it('stamps a newly added migration behind the ones already published', function () {
@@ -219,67 +210,56 @@ it('stamps a newly added migration behind the ones already published', function 
 
     $alreadyPublished = [];
     foreach ($sources as $offset => $source) {
-        $alreadyPublished[$source] = '2020_01_01_'.str_pad((string) $offset, 6, '0', STR_PAD_LEFT)
-            .'_'.PackageMigrations::name($source);
+        $alreadyPublished[basename($source)] = '2020_01_01_'.str_pad((string) $offset, 6, '0', STR_PAD_LEFT)
+            .'_'.publishedMigrationName($source);
     }
 
-    $database = useTemporaryDatabasePath($this->app, ...array_values($alreadyPublished));
-
-    $map = PackageMigrations::publishMap(packageMigrationPath());
+    $database = publishAgainst($this->app, ...array_values($alreadyPublished));
+    $map = publishedBySource();
 
     foreach ($alreadyPublished as $source => $name) {
         expect($map[$source])->toBe($database.'/migrations/'.$name);
     }
 
-    expect(publishedMigrationName($map[$added]))->toBe(PackageMigrations::name($added))
-        ->and(basename($map[$added]))->not->toBe(PackageMigrations::name($added));
+    $addedTarget = $map[basename($added)];
+
+    expect(publishedMigrationName($addedTarget))->toBe(publishedMigrationName($added))
+        ->and(basename($addedTarget))->not->toBe(basename($added));
 
     $targets = array_map(static fn (string $path): string => basename($path), array_values($map));
     $sorted = $targets;
     sort($sorted);
 
     expect($sorted)->toBe($targets)
-        ->and(end($sorted))->toBe(basename($map[$added]));
+        ->and(end($sorted))->toBe(basename($addedTarget));
 
     removeTemporaryDirectory($database);
 });
 
 it('hands the consumer a second migration when a source migration is renamed', function () {
-    // The lookup matches on the published filename, so renaming a source inside the package
-    // stops finding what the consumer already has and they receive a second migration creating
-    // the same table. Renaming a released migration is a breaking change; this pins why.
-    $existing = '2020_01_01_000000_create_roles_table.php';
-    $database = useTemporaryDatabasePath($this->app, $existing);
+    // The lookup matches on the published filename, so a source renamed since the consumer
+    // published stops matching what they hold: they receive a second migration creating the
+    // same table. Renaming a released migration is a breaking change; this pins why.
+    $stale = '2020_01_01_000000_create_pbac_roles_table.php';
+    $database = publishAgainst($this->app, $stale);
 
-    $renamed = makeTemporaryDirectory('00001_create_pbac_roles_table.php');
-    $target = array_values(PackageMigrations::publishMap($renamed, 1_600_000_000))[0];
+    $roles = publishedBySource()['0001_01_01_000001_create_roles_table.php'];
 
-    touch($target);
+    expect(basename($roles))->not->toBe($stale);
 
-    expect(glob($database.'/migrations/*_roles_table.php'))->toHaveCount(2);
+    touch($roles);
 
-    removeTemporaryDirectory($renamed);
+    expect(glob($database.'/migrations/*_create_*roles_table.php'))->toHaveCount(2);
+
     removeTemporaryDirectory($database);
 });
 
 it('reuses an already published migration instead of stamping a second copy', function () {
-    $first = packageMigrationSources()[0];
-    $existing = '2020_01_01_000000_'.PackageMigrations::name($first);
+    $existing = '2020_01_01_000000_create_roles_table.php';
+    $database = publishAgainst($this->app, $existing);
 
-    $database = useTemporaryDatabasePath($this->app, $existing);
-
-    (new PbacServiceProvider($this->app))->boot();
-
-    // The provider keys its publish map by its own unnormalised source paths, so match on the
-    // filename rather than on the path this test resolved.
-    $target = null;
-    foreach (publishedMigrations() as $source => $path) {
-        if (basename($source) === basename($first)) {
-            $target = $path;
-        }
-    }
-
-    expect($target)->toBe($database.'/migrations/'.$existing);
+    expect(publishedBySource()['0001_01_01_000001_create_roles_table.php'])
+        ->toBe($database.'/migrations/'.$existing);
 
     removeTemporaryDirectory($database);
 });
