@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.4.0](https://github.com/kirchDev/laravel-pbac/compare/v0.3.0...v0.4.0) (2026-08-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **migrations:** the package's migration filenames changed. Consumers are unaffected — they only ever see the published names, which are generated.
+* **migrations:** published migrations no longer carry the package's own filenames. A consumer who relied on the removed auto-load and never published must record the published copies as run before migrating; the README upgrade note carries the recipe.
+* **migrations:** migrations are no longer auto-loaded. Consumers relying on the auto-load must run `php artisan vendor:publish --tag=pbac-migrations` once; anyone who already published is unaffected, since the filenames are unchanged.
+
+### Features
+
+* **migrations:** publish migrations instead of auto-loading them ([6052e68](https://github.com/kirchDev/laravel-pbac/commit/6052e68db8985cf2d8b9fe0ddcb96a197321d70a)), closes [#39](https://github.com/kirchDev/laravel-pbac/issues/39)
+* **migrations:** stamp published migrations at publish time ([0fe57ca](https://github.com/kirchDev/laravel-pbac/commit/0fe57ca22a5b9cc574aabe29a2fb7f0f033733cc))
+
+
+### Documentation
+
+* **migrations:** document the publish requirement and the upgrade path ([85927ff](https://github.com/kirchDev/laravel-pbac/commit/85927ff67e0cf34942d2474620cec91e88b61fac)), closes [#39](https://github.com/kirchDev/laravel-pbac/issues/39)
+* **migrations:** state the unpublished upgrade as a breaking change ([691bcb9](https://github.com/kirchDev/laravel-pbac/commit/691bcb9041e6434be0e56b2ee906f07fbc649f2f))
+
+
+### Refactor
+
+* **migrations:** move publish naming into PackageMigrations ([ed610a4](https://github.com/kirchDev/laravel-pbac/commit/ed610a47d812d9bc43d77251b0268568be25f9d4))
+* **migrations:** name source migrations by sequence instead of date ([160799a](https://github.com/kirchDev/laravel-pbac/commit/160799a63efd9f0b3f40c7317b6ea24968af3e2c))
+
 ## [0.3.0](https://github.com/kirchDev/laravel-pbac/compare/v0.2.0...v0.3.0) (2026-08-26)
 
 
