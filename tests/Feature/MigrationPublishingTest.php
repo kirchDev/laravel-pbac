@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -261,4 +263,43 @@ it('reuses an already published migration instead of stamping a second copy', fu
         ->toBe($database.'/migrations/'.$existing);
 
     removeTemporaryDirectory($database);
+});
+
+it('does no per-migration work outside the console', function () {
+    // Upstream computes each published name — and that globs the consumer's database/migrations
+    // — before its own console check, so a request-time boot would pay a directory scan per
+    // migration. Only vendor:publish needs those names. Count the work rather than the map:
+    // the map is guarded upstream and looks identical either way.
+    $spy = function () {
+        return new class($this->app) extends PbacServiceProvider
+        {
+            public int $namesGenerated = 0;
+
+            // The base dir is reflected off the class file, which for an anonymous subclass is
+            // this test — point it back at the real provider's directory.
+            protected function getPackageBaseDir(): string
+            {
+                return dirname((string) (new ReflectionClass(parent::class))->getFileName());
+            }
+
+            protected function generateMigrationName(string $migrationFileName, Carbon|CarbonImmutable $now): string
+            {
+                $this->namesGenerated++;
+
+                return parent::generateMigrationName($migrationFileName, $now);
+            }
+        };
+    };
+
+    $console = $spy();
+    $console->register()->boot();
+
+    expect($console->namesGenerated)->toBe(count(packageMigrationSources()));
+
+    (new ReflectionProperty($this->app, 'isRunningInConsole'))->setValue($this->app, false);
+
+    $request = $spy();
+    $request->register()->boot();
+
+    expect($request->namesGenerated)->toBe(0);
 });

@@ -41,6 +41,23 @@ class PbacServiceProvider extends PackageServiceProvider
             ->discoversMigrations();
     }
 
+    /**
+     * Skip the migration processing entirely outside the console.
+     *
+     * Upstream computes each published name — which globs the consumer's database/migrations —
+     * before its own runningInConsole() check, so a plain HTTP request would pay a directory
+     * scan on every boot. Nothing but vendor:publish needs that map while runsMigrations() is
+     * off; if it is ever switched on, loadMigrationsFrom() has to run and the guard stands down.
+     */
+    protected function bootPackageMigrations(): PackageServiceProvider
+    {
+        if (! $this->app->runningInConsole() && ! $this->package->runsMigrations) {
+            return $this;
+        }
+
+        return parent::bootPackageMigrations();
+    }
+
     public function packageRegistered(): void
     {
         $this->app->scoped(OrganisationResolver::class, function ($app): OrganisationResolver {
