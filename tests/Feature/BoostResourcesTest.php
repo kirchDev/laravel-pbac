@@ -238,12 +238,17 @@ it('ships a core guideline', function () {
 it('renders every guideline to non-empty content', function () {
     // A guideline that throws while rendering is replaced by an empty string, and third-party
     // guidelines have no fallback — the failure reaches the consumer as silently missing context.
+    // A directive that compiles instead of printing is the quieter half of the same failure: the
+    // render succeeds and ships its own compiled PHP as documentation, so '<?php' is asserted too.
+    // Writing an annotation like a generic bound into a guideline needs the '@' split off
+    // ({{ '@'.'use' }}), because Blade compiles the directive even inside a string literal.
     foreach (boostGuidelines() as $guideline) {
         $rendered = trim(renderGuideline($guideline));
 
         expect($rendered)->not->toBe('', $guideline)
             ->and(str_contains($rendered, '@if'))->toBeFalse($guideline)
             ->and(str_contains($rendered, '{{'))->toBeFalse($guideline)
+            ->and(str_contains($rendered, '<?php'))->toBeFalse($guideline)
             ->and(str_contains($rendered, '___'))->toBeFalse($guideline);
     }
 });
