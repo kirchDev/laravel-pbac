@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/kirchDev/laravel-pbac/compare/v0.6.0...v0.6.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* **boost:** separate the resolution rule from type declarations ([1fbf8fa](https://github.com/kirchDev/laravel-pbac/commit/1fbf8fa302f8a923e987538f7374af409738aab9)), closes [#50](https://github.com/kirchDev/laravel-pbac/issues/50)
+* **types:** keep the configured models across the role and permission relations ([e517d9e](https://github.com/kirchDev/laravel-pbac/commit/e517d9e233585e8e53624d04285a5180392c8c24)), closes [#50](https://github.com/kirchDev/laravel-pbac/issues/50)
+
 ## [0.6.0](https://github.com/kirchDev/laravel-pbac/compare/v0.5.0...v0.6.0) (2026-09-01)
 
 
