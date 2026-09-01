@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use KirchDev\Pbac\Authorization\DecisionCache;
 
+/**
+ * @template TRoleModel of Role = Role
+ * @template TRolePermissionModel of RolePermission = RolePermission
+ */
 class Permission extends Model
 {
     /**
@@ -29,17 +33,17 @@ class Permission extends Model
     }
 
     /**
-     * @return BelongsToMany<Role, $this, RolePermission, 'pivot'>
+     * @return BelongsToMany<TRoleModel, $this, TRolePermissionModel, 'pivot'>
      */
     public function roles(): BelongsToMany
     {
-        /** @var class-string<Role> $roleModel */
+        /** @var class-string<TRoleModel> $roleModel */
         $roleModel = config('pbac.models.role', Role::class);
         $table = config('pbac.table_names.role_has_permissions', 'role_has_permissions');
         $rolePivot = config('pbac.column_names.role_pivot_key') ?: 'role_id';
         $permissionPivot = config('pbac.column_names.permission_pivot_key') ?: 'permission_id';
         $targetMorphKey = config('pbac.column_names.target_morph_key', 'target_id');
-        /** @var class-string<RolePermission> $rolePermissionModel */
+        /** @var class-string<TRolePermissionModel> $rolePermissionModel */
         $rolePermissionModel = config('pbac.models.role_permission', RolePermission::class);
 
         return $this->belongsToMany($roleModel, $table, $permissionPivot, $rolePivot)
