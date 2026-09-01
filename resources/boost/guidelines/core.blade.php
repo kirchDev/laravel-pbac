@@ -5,14 +5,13 @@ native `Gate` integration and a request-scoped decision cache. Everything is con
 `config/pbac.php`.
 
 ## Setup order (do not reorder)
-- Publish the config first: `{{ $assist->artisanCommand('vendor:publish --tag=pbac-config') }}` —
-  the keys below are set in that published copy.
+- Publish the config first: `{{ $assist->artisanCommand('vendor:publish --tag=pbac-config') }}`.
+- Set `pbac.keys.*` (`id` / `uuid` / `ulid`) in it now — the migrations read the config at run time
+  and bake the key types into the schema, so this has to happen before the `migrate` below.
+  Changing them afterwards needs an application-owned migration.
 - The package ships migrations but never loads them. Publish them once, then migrate:
   `{{ $assist->artisanCommand('vendor:publish --tag=pbac-migrations') }}` and
   `{{ $assist->artisanCommand('migrate') }}`.
-- Set `pbac.keys.*` (`id` / `uuid` / `ulid`) **before** that `migrate` run — the migrations read the
-  config at run time and bake the key types into the schema. Changing them later needs an
-  application-owned migration.
 - Add the `KirchDev\Pbac\Traits\HasRoles` trait to the authorizable model (usually `User`).
 
 ## Checking abilities
