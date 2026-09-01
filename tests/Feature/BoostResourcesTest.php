@@ -18,18 +18,36 @@ function boostPath(string $subpath = ''): string
 
 /**
  * Every guideline file Boost would load. Third-party guidelines get no version resolution: Boost
- * walks the directory recursively and always loads everything it finds, `.blade.php` and `.md`.
+ * walks the directory recursively and always loads everything it finds, `.blade.php` and `.md`,
+ * skipping only a nested `skill` directory. The walk here is recursive for the same reason — a
+ * guideline filed in a subdirectory would otherwise escape every assertion below, which is the
+ * silence these tests exist to close. `glob()` cannot do it: `**` is one path segment to it.
  *
  * @return list<string>
  */
 function boostGuidelines(): array
 {
-    $files = array_merge(
-        glob(boostPath('guidelines').'/**/*.blade.php') ?: [],
-        glob(boostPath('guidelines').'/*.blade.php') ?: [],
-        glob(boostPath('guidelines').'/**/*.md') ?: [],
-        glob(boostPath('guidelines').'/*.md') ?: [],
+    $directory = boostPath('guidelines');
+
+    if (! is_dir($directory)) {
+        return [];
+    }
+
+    $entries = new RecursiveIteratorIterator(
+        new RecursiveCallbackFilterIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+            static fn (SplFileInfo $entry): bool => $entry->getFilename() !== 'skill',
+        ),
     );
+
+    $files = [];
+
+    foreach ($entries as $entry) {
+        if ($entry instanceof SplFileInfo
+            && (str_ends_with($entry->getFilename(), '.blade.php') || str_ends_with($entry->getFilename(), '.md'))) {
+            $files[] = $entry->getPathname();
+        }
+    }
 
     sort($files);
 
