@@ -5,6 +5,8 @@ native `Gate` integration and a request-scoped decision cache. Everything is con
 `config/pbac.php`.
 
 ## Setup order (do not reorder)
+- Publish the config first: `{{ $assist->artisanCommand('vendor:publish --tag=pbac-config') }}` —
+  the keys below are set in that published copy.
 - The package ships migrations but never loads them. Publish them once, then migrate:
   `{{ $assist->artisanCommand('vendor:publish --tag=pbac-migrations') }}` and
   `{{ $assist->artisanCommand('migrate') }}`.
