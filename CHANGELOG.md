@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.0](https://github.com/kirchDev/laravel-pbac/compare/v0.5.0...v0.6.0) (2026-09-01)
+
+
+### Features
+
+* **boost:** ship a core guideline and a pbac-development skill ([f514aa7](https://github.com/kirchDev/laravel-pbac/commit/f514aa7078a8dbeefaaab16238bae11ca8a785c5)), closes [#46](https://github.com/kirchDev/laravel-pbac/issues/46)
+
+
+### Bug Fixes
+
+* **boost:** correct the decision-cache caveat in the skill ([7123ddd](https://github.com/kirchDev/laravel-pbac/commit/7123dddf9d287f3e48b70f9e72012149ec25a1c4)), closes [#46](https://github.com/kirchDev/laravel-pbac/issues/46)
+* **boost:** order the setup steps so the list works read top to bottom ([ec03b15](https://github.com/kirchDev/laravel-pbac/commit/ec03b15e7b5f197fcaeb470f927e6fe018ca33c8)), closes [#46](https://github.com/kirchDev/laravel-pbac/issues/46)
+* **boost:** publish the config before setting the key types ([81a749b](https://github.com/kirchDev/laravel-pbac/commit/81a749b07ea1810c631ce7d9bf7e0bdad951242c)), closes [#46](https://github.com/kirchDev/laravel-pbac/issues/46)
+
+
+### Documentation
+
+* **agents:** note the consumer-facing boost resources ([b4e390f](https://github.com/kirchDev/laravel-pbac/commit/b4e390fdfc80b058eb3483903a3c26d3d49d4945)), closes [#46](https://github.com/kirchDev/laravel-pbac/issues/46)
+
 ## [0.5.0](https://github.com/kirchDev/laravel-pbac/compare/v0.4.0...v0.5.0) (2026-08-31)
 
 
