@@ -16,16 +16,22 @@ on:
       - 'docs/**'
       - LICENSE
 
-permissions:
-  contents: read
-
+# PERMISSIONS PER JOB, NOT PER WORKFLOW. A workflow-level block caps every
+# called body: `_ci-laravel.yml` needs `pull-requests: write` for its coverage
+# comment, and a caller holding only `contents: read` makes the whole run fail
+# at startup rather than at that step.
 jobs:
   check:
     name: CI
+    permissions:
+      contents: read
     uses: kirchDev/workflows/.github/workflows/_ci-check.yml@f47f598f549a3c97924fdfd00f15371ea557e1aa # v0.1.1
 
   php:
     name: PHP
+    permissions:
+      contents: read
+      pull-requests: write
     uses: kirchDev/workflows/.github/workflows/_ci-laravel.yml@f47f598f549a3c97924fdfd00f15371ea557e1aa # v0.1.1
     with:
       php-versions: '["8.4", "8.5"]'
