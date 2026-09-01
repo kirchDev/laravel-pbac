@@ -1,3 +1,7 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# A Packagist package: the tag is what Composer resolves, so nothing is
+# published from here.
 name: Release Please
 
 on:
@@ -5,49 +9,12 @@ on:
     branches:
       - main
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    name: Release Please
     permissions:
       contents: write
       pull-requests: write
-    steps:
-      - name: Fetch Release App PEM from Bitwarden
-        uses: bitwarden/sm-action@1238aae8fc64b212641190a9227c8a734ab1a793 # v3.0.1
-        with:
-          access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
-          cloud_region: eu
-          secrets: |
-            3a3459f0-c986-4ff3-a36b-b4550012d41e > KIRCHDEV_RELEASE_APP_PEM
-
-      - name: Mint Release App token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: 'Iv23li3hNqtsZ8fDlwqH'
-          private-key: ${{ env.KIRCHDEV_RELEASE_APP_PEM }}
-
-      - id: release
-        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-
-      # release-please opens a release PR from a `release-please--…` branch and
-      # leaves it dangling after merge. Clean those up locally instead of
-      # enabling the repo-wide "Auto-delete head branches" toggle (which would
-      # also wipe long-lived branches like `dev`).
-      - name: Delete merged release-please branches
-        if: ${{ steps.release.outputs.release_created == 'true' }}
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          for branch in $(gh api "repos/${{ github.repository }}/branches" --paginate --jq '.[].name' | grep '^release-please--' || true); do
-            echo "Deleting $branch"
-            gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$branch" || true
-          done
+    uses: kirchDev/workflows/.github/workflows/_release-please.yml@f47f598f549a3c97924fdfd00f15371ea557e1aa # v0.1.1
+    secrets:
+      BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
