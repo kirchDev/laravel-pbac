@@ -12,7 +12,11 @@ scoping, or debugging why a check returned what it did in an application that us
 ## Defining roles and permissions
 
 Roles and permissions are plain Eloquent models. Resolve the classes through config so a host
-application that swapped them keeps working:
+application that swapped them keeps working — that rule is about resolution (`new`, `::query()`,
+`::find()`), not about type declarations, which construct nothing and need no change. Where the
+sharper type is worth having, name your own classes in the generics: `@use HasRoles<Role,
+RoleAssignment>` on the authorizable and `@extends Role<Permission, RolePermission>` on a model
+override, and `roles()` and `permissions()` keep them.
 
 ```php
 $roleClass = config('pbac.models.role');

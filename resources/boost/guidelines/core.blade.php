@@ -33,7 +33,18 @@ native `Gate` integration and a request-scoped decision cache. Everything is con
 
 ## Extending it
 - Resolve the models through `config('pbac.models.role')`, `...permission`, `...role_assignment`,
-  `...role_permission` — never reference `KirchDev\Pbac\Models\*` directly. All four are swappable.
+  `...role_permission` — all four are swappable. Never `new`, `::query()` or `::find()` on
+  `KirchDev\Pbac\Models\*`: the application's own subclass carries its key generation, casts and
+  model events, and an application without a morph map stores the class it resolved, so a role
+  assignment written through the packaged class names a different class than every row beside it
+  and quietly stops resolving — with nothing raised anywhere.
+- That rule is about resolution, not about type declarations. A type-hint or a `@param`/`@return`
+  constructs nothing, and an application's subclass satisfies a hint on the packaged class, so
+  neither needs changing. Narrow one where the generics carry the type: declare
+  `{{ '@'.'use' }} HasRoles<Role, RoleAssignment>` on the authorizable, and
+  `{{ '@'.'extends' }} Role<Permission, RolePermission>` on a model override, naming your own
+  classes — `roles()` and `permissions()` then keep them. Never add an annotation purely
+  to narrow a type.
 - Custom tenancy implements `KirchDev\Pbac\Contracts\OrganisationResolver` and is wired via
   `pbac.organisation.resolver`.
 - Bind any PBAC-adjacent service as `scoped`, not `singleton` (Octane keeps workers alive), and let
