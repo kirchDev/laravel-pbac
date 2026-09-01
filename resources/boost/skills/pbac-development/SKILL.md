@@ -116,7 +116,10 @@ context is redacted by default; `Pbac::withUnredactedTrace(fn () => ...)` lifts 
 - Create the roles and permissions the test needs, assign, then assert `$user->can(...)`.
 - For an organisation-scoped assertion, wrap it in `Pbac::withOrganisation()` and assert the
   negative case outside the scope too — that is where cache bleed would show up.
-- Beware of caching inside a single test: the decision cache is request-scoped, so a check made
-  before a role is granted stays cached. Change scope (which resets it) or resolve a fresh check.
+- Grant through the package's own API. The decision cache clears itself on those paths —
+  `assignRole`/`removeRole`/`syncRoles`, `Role::givePermissionTo()`/`revokePermissionTo()`, and any
+  `saved` or `deleted` on a `Role` or `Permission`. A write that goes around them
+  (`$role->permissions()->attach(...)`, a raw insert into a pivot) fires no model event and clears
+  nothing, so a check taken before it keeps its cached answer.
 - Deleting a `Role` or `Permission` cascades to the pivot tables; deleting a host model does **not**
   (the morph side has no foreign key). Assert that clean-up yourself if the application relies on it.
