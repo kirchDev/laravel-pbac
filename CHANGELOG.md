@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.7.0](https://github.com/kirchDev/laravel-pbac/compare/v0.6.1...v0.7.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* move to pnpm 12
+* this repository now requires pnpm 12.
+
+### Features
+
+* **ci:** call the central workflow bodies instead of copying them ([48fe9ee](https://github.com/kirchDev/laravel-pbac/commit/48fe9ee90e155bab58d4efe548673d4cd665cd1d))
+
+
+### Bug Fixes
+
+* **ci:** bump the bodies to v0.1.2 ([cdb689d](https://github.com/kirchDev/laravel-pbac/commit/cdb689db51edffc4a46d5b78a10aaa881d28a1e5))
+* **ci:** bump the workflow bodies to v0.1.3 ([5184fa0](https://github.com/kirchDev/laravel-pbac/commit/5184fa0827938aba355ebed7bc987015233f25b8))
+* **ci:** grant the permissions the called bodies need ([5d14099](https://github.com/kirchDev/laravel-pbac/commit/5d14099629f1409141b67e52a9c85c90aa4eaf69))
+* **ci:** pin the workflow bodies to v0.2.0 and drop paths-ignore ([120a620](https://github.com/kirchDev/laravel-pbac/commit/120a6206b3842049de8e0b38102cbac48b30f0ec))
+* **ci:** pin the workflow bodies to v0.5.0 ([ec25dce](https://github.com/kirchDev/laravel-pbac/commit/ec25dce464225dc3b5ee54cf99228bcae9d1b7e3))
+* **ci:** pin the workflow bodies to v0.7.0 ([a7974b0](https://github.com/kirchDev/laravel-pbac/commit/a7974b05ef26d9a9b98c85ffdb8626120580af31))
+
+
+### Reverts
+
+* go back to pnpm 11.25.0 ([9935488](https://github.com/kirchDev/laravel-pbac/commit/9935488b98962db0c78dd3e3faf10c44ec6d24fe))
+
+
+### Chores
+
+* move to pnpm 12 ([8b9f707](https://github.com/kirchDev/laravel-pbac/commit/8b9f707e5a03f24c5f6eb5c17646b08fa11221b4))
+* move to pnpm 12 ([34584a9](https://github.com/kirchDev/laravel-pbac/commit/34584a9112c421bef84815d6b06b949fe5bf62f6))
+
 ## [0.6.1](https://github.com/kirchDev/laravel-pbac/compare/v0.6.0...v0.6.1) (2026-09-01)
 
 
