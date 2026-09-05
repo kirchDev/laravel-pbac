@@ -28,14 +28,14 @@ jobs:
     name: CI
     permissions:
       contents: read
-    uses: kirchDev/workflows/.github/workflows/_ci-check.yml@7fd4eaf529500fcd07c527ae70c839ab9ac7d76f # v0.7.0
+    uses: kirchDev/workflows/.github/workflows/_ci-check.yml@94cbcbd676b989ac6c6327055a240132f5cd76a5 # v0.8.0
 
   php:
     name: PHP
     permissions:
       contents: read
       pull-requests: write
-    uses: kirchDev/workflows/.github/workflows/_ci-laravel.yml@7fd4eaf529500fcd07c527ae70c839ab9ac7d76f # v0.7.0
+    uses: kirchDev/workflows/.github/workflows/_ci-laravel.yml@94cbcbd676b989ac6c6327055a240132f5cd76a5 # v0.8.0
     with:
       php-versions: '["8.4", "8.5"]'
       laravel-versions: '["13.*"]'
