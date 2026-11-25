@@ -218,22 +218,23 @@ Wondering _why_ a permission check returned what it did? Turn on tracing:
 
 </details>
 
-`Gate::inspect()` carries the decision's reason code via `Response::message()`:
+`Gate::inspect()` carries a denial's reason code via `Response::message()`; an allow carries none:
 
 ```php
 $response = Gate::inspect('posts.update', $post);
 
 $response->allowed();  // bool
-$response->message();  // 'pbac.role_permission_allowed' | 'pbac.no_matching_role_permission' | …
+$response->message();  // null on allow | 'pbac.no_matching_role_permission' | …
 ```
 
-For the human-readable trace, reach for the last decision through the `Pbac` facade:
+For the reason of every decision, allows included, and the human-readable trace, reach for the last decision through the `Pbac` facade:
 
 ```php
 use KirchDev\Pbac\Facades\Pbac;
 
 $user->can('posts.update', $post);
 
+Pbac::lastDecision()?->reason();             // 'pbac.role_permission_allowed' | …
 Pbac::lastDecision()?->trace()->visible();   // structured entries
 Pbac::lastDecision()?->trace()->formatted(); // 'role_permission_query(allowed=1, targeted=1) → role_permission_allowed'
 ```
