@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.1](https://github.com/kirchDev/laravel-pbac/compare/v0.7.0...v0.7.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* **types:** declare the trace and last-decision methods on the Pbac facade ([0800629](https://github.com/kirchDev/laravel-pbac/commit/0800629c521dd32f2dc80afef7e294927dde402b))
+
+
+### Documentation
+
+* **agents:** drop the CLAUDE.md mirror in favour of AGENTS.md ([1821f35](https://github.com/kirchDev/laravel-pbac/commit/1821f35b2546309c11bd4a619255c1948252cbfa))
+* **agents:** trim AGENTS.md to its rules and traps ([d42cd82](https://github.com/kirchDev/laravel-pbac/commit/d42cd8244a99210b3b9c42bb9f85569fecfb135d))
+* **contributing:** trim the guide and correct the branch and tooling facts ([4227ecd](https://github.com/kirchDev/laravel-pbac/commit/4227ecd1709b432f627f4e21b599f1bef6b783d8))
+* correct the trace and octane facts in the spatie migration guide ([ab5ff29](https://github.com/kirchDev/laravel-pbac/commit/ab5ff2976783a080067e584777045dfb002b0bf7))
+* drop the hand-written table of contents from the spatie guide ([15be371](https://github.com/kirchDev/laravel-pbac/commit/15be371ffeb540e572ca72dc79a98c1d2478b800))
+* move the spatie migration guide into a duxt guides section ([5410355](https://github.com/kirchDev/laravel-pbac/commit/541035536e4aefcbd18e1bf095e8a46d95dc4888))
+* **readme:** correct stale facts and restore the canonical section order ([3a2815c](https://github.com/kirchDev/laravel-pbac/commit/3a2815c01a916df0deadab020ea6f75769012f53))
+* **readme:** fold reference detail into collapsible blocks ([7aa45e1](https://github.com/kirchDev/laravel-pbac/commit/7aa45e13350be87d299bf69772cfa7a92482f8bb))
+* **readme:** state that an allowed response carries no reason message ([d52df75](https://github.com/kirchDev/laravel-pbac/commit/d52df75d7ab7cdc8101d221b66516e6f3a455dab))
+
 ## [0.7.0](https://github.com/kirchDev/laravel-pbac/compare/v0.6.1...v0.7.0) (2026-10-12)
 
 
