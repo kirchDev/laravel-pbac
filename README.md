@@ -21,17 +21,6 @@ Pbac::withOrganisation($org->id, fn () => $user->can('members.invite')); // ✅
 
 That's it. Tenant-aware authorization in one line, native Laravel `Gate` semantics, no manual scope plumbing.
 
-## ✨ Features
-
-- **🎭 Roles & permissions** — plain Eloquent models you can swap out for your own (UUID / ULID / int keys).
-- **🏢 Organisation/tenant scoping** — first-class, with a pluggable `OrganisationResolver`. Scopes never bleed across tenants.
-- **🚪 Native `Gate` integration** — `$user->can()`, `Gate::allows()`, `Gate::inspect()` all Just Work, with fallback to native Laravel gates.
-- **⚡ Per-request decision cache** — repeated checks within a request are free. Auto-invalidates on role/permission mutations.
-- **🔍 Decision trace** — opt-in audit trail of _why_ a check returned what it did. Redacted in production by default.
-- **🚀 Octane-aware** — optional reset listeners on `RequestTerminated`, `TaskTerminated`, `TickTerminated`. No stale state across requests.
-- **🧰 Heavy configuration** — model / table / column / key types all overridable. UUID setups supported out of the box.
-- **🧪 Library-grade** — Pest 4 + Testbench, no host app needed.
-
 ## 📦 Installation
 
 ```bash
@@ -86,6 +75,17 @@ $user->can('posts.update');     // ✅ true
 Gate::allows('posts.update');   // ✅ true (same plumbing)
 Gate::inspect('posts.update');  // ✅ Response with trace (if enabled)
 ```
+
+## ✨ Features
+
+- **🎭 Roles & permissions** — plain Eloquent models you can swap out for your own (UUID / ULID / int keys).
+- **🏢 Organisation/tenant scoping** — first-class, with a pluggable `OrganisationResolver`. Scopes never bleed across tenants.
+- **🚪 Native `Gate` integration** — `$user->can()`, `Gate::allows()`, `Gate::inspect()` all Just Work, with fallback to native Laravel gates.
+- **⚡ Per-request decision cache** — repeated checks within a request are free. Auto-invalidates on role/permission mutations.
+- **🔍 Decision trace** — opt-in audit trail of _why_ a check returned what it did. Redacted in production by default.
+- **🚀 Octane-aware** — optional reset listeners on `RequestTerminated`, `TaskTerminated`, `TickTerminated`. No stale state across requests.
+- **🧰 Heavy configuration** — model / table / column / key types all overridable. UUID setups supported out of the box.
+- **🧪 Library-grade** — Pest 5 + Testbench, no host app needed.
 
 ## 🏢 Multi-tenant authorization
 
@@ -249,7 +249,7 @@ The host-model side is polymorphic (`model_type` + `model_id`), so no FK enforce
 | `organisation.enabled` / `.resolver` | Toggle multi-tenancy, plug a custom resolver.                                                            |
 | `gate.fallback_to_laravel_gates`     | Whether unmatched abilities fall back to native Laravel gates.                                           |
 | `trace.enabled`                      | Capture per-decision explanations. Redacted in prod by default.                                          |
-| `cache.decision_store`               | Decision cache backend (`request` by default).                                                           |
+| `cache.*`                            | Reserved — decisions are always cached per request, and no code reads these keys yet.                    |
 | `register_octane_reset_listener`     | Reset scoped state at Octane worker boundaries.                                                          |
 
 ## 🔁 Migrating from `spatie/laravel-permission`
@@ -262,7 +262,7 @@ and multi-tenancy differences plus a copy-pasteable data-migration script:
 
 ```bash
 composer install
-composer test       # Pest 4
+composer test       # Pest 5
 composer pint       # Laravel Pint (test mode)
 composer larastan   # Larastan / PHPStan
 ```
@@ -297,14 +297,14 @@ filenames before that run.
 
 ## 🤝 Contributing
 
-PRs welcome. Conventional Commits required (enforced via commitlint). Husky runs Pint + Larastan + oxlint + oxfmt on `git commit`, so you can mostly forget about style.
+PRs welcome — branch off and target `dev`, see [CONTRIBUTING.md](CONTRIBUTING.md). Conventional Commits required (enforced via commitlint). Husky runs Pint + Larastan + oxlint + oxfmt on `git commit`, so you can mostly forget about style.
 
 > [!TIP]
 > Run `pnpm check:fix` (Node tooling) and `composer pint:fix` (PHP) before pushing — CI will catch what husky missed.
 
 ## 🛣️ Versioning
 
-[Semantic Versioning](https://semver.org/). Release notes in [CHANGELOG.md](CHANGELOG.md) — managed by [release-please](https://github.com/googleapis/release-please).
+[Semantic Versioning](https://semver.org/) via [release-please](https://github.com/googleapis/release-please) — see [CHANGELOG.md](CHANGELOG.md).
 
 ## 📄 License
 
