@@ -79,7 +79,7 @@ Gate::inspect('posts.update');  // ✅ Response with trace (if enabled)
 ## ✨ Features
 
 - **🎭 Roles & permissions** — plain Eloquent models you can swap out for your own (UUID / ULID / int keys).
-- **🏢 Organisation/tenant scoping** — first-class, with a pluggable `OrganisationResolver`. Scopes never bleed across tenants.
+- **🏢 Organisation/tenant scoping** — first-class, with a pluggable `OrganisationResolver`.
 - **🚪 Native `Gate` integration** — `$user->can()`, `Gate::allows()`, `Gate::inspect()` all Just Work, with fallback to native Laravel gates.
 - **⚡ Per-request decision cache** — repeated checks within a request are free. Auto-invalidates on role/permission mutations.
 - **🔍 Decision trace** — opt-in audit trail of _why_ a check returned what it did. Redacted in production by default.
@@ -115,7 +115,8 @@ Pbac::withoutOrganisation(fn () => $user->can('admin.impersonate'));
 
 The decision cache resets on scope enter/exit, so checks **never bleed across tenants**.
 
-### Assigning global roles when org scoping is enabled
+<details>
+<summary>Assigning global roles when org scoping is enabled</summary>
 
 To prevent silent mis-targeting, role **mutations** by name refuse to resolve a global role unless the caller signals intent. Pass `global: true`, or wrap the call in `Pbac::withoutOrganisation()` and assign by `Role` instance:
 
@@ -132,6 +133,11 @@ Pbac::withoutOrganisation(fn () => $user->assignRole($role));
 
 Inside an active organisation scope, `$user->assignRole('owner')` resolves the org-scoped row only — global rows with the same name are deliberately invisible to mutations without the explicit flag.
 
+</details>
+
+<details>
+<summary>Bring your own resolver</summary>
+
 Bring your own resolver (e.g. backed by a tenancy package or route binding):
 
 ```php
@@ -146,6 +152,8 @@ final class TenantRouteResolver implements \KirchDev\Pbac\Contracts\Organisation
 ```
 
 Wire it via `pbac.organisation.resolver`.
+
+</details>
 
 ## 🧰 Console commands
 
@@ -162,12 +170,17 @@ php artisan pbac:role:assign ops@example.com owner --organisation=42 --column=em
 php artisan pbac:role:revoke 1 superadmin --global
 ```
 
+<details>
+<summary>All command options</summary>
+
 | Option           | What it does                                                                                                     |
 | :--------------- | :--------------------------------------------------------------------------------------------------------------- |
 | `--global`       | Target the global role. Required when organisation scoping is on and the role is not organisation-bound.         |
 | `--organisation` | Target the role bound to this organisation. Mutually exclusive with `--global`.                                  |
 | `--model`        | Fully qualified target model class. Overrides `pbac.models.default_model` and the default guard's auth provider. |
 | `--column`       | Column to look the identifier up on. Defaults to the primary key.                                                |
+
+</details>
 
 > [!IMPORTANT]
 > **Scope is never inferred.** While `pbac.organisation.enabled` is on, exactly one of `--global` / `--organisation=` is required — a forgotten flag must not silently grant a global role in production. With the feature off, neither flag applies.
@@ -185,6 +198,15 @@ Wondering _why_ a permission check returned what it did? Turn on tracing:
     // null → auto: redact when APP_ENV=production AND APP_DEBUG=false
     // true|false → forced
     'redact' => null,
+],
+```
+
+<details>
+<summary>Structured logging of decisions</summary>
+
+```php
+// config/pbac.php
+'trace' => [
     'log' => [
         'enabled' => false,           // structured logging via Laravel's logger
         'channel' => null,            // null = default channel
@@ -193,6 +215,8 @@ Wondering _why_ a permission check returned what it did? Turn on tracing:
     ],
 ],
 ```
+
+</details>
 
 `Gate::inspect()` carries the decision's reason code via `Response::message()`:
 
@@ -214,6 +238,9 @@ Pbac::lastDecision()?->trace()->visible();   // structured entries
 Pbac::lastDecision()?->trace()->formatted(); // 'role_permission_query(allowed=1, targeted=1) → role_permission_allowed'
 ```
 
+<details>
+<summary>Production redaction and the unredacted escape hatch</summary>
+
 Production redacts trace context arrays by default (step names stay; values are stripped). Opt in to the full trace per request when you need it — e.g. for an admin debug route:
 
 ```php
@@ -223,6 +250,8 @@ Pbac::withUnredactedTrace(function () use ($user, $post) {
     return Pbac::lastDecision()?->trace()->formatted(); // unredacted
 });
 ```
+
+</details>
 
 ## 🧹 Cascade behaviour on delete
 
@@ -258,20 +287,10 @@ Coming from `spatie/laravel-permission`? See the dedicated guide for schema, API
 and multi-tenancy differences plus a copy-pasteable data-migration script:
 [docs/migration-from-spatie-laravel-permission.md](docs/migration-from-spatie-laravel-permission.md).
 
-## 🧪 Testing
-
-```bash
-composer install
-composer test       # Pest 5
-composer pint       # Laravel Pint (test mode)
-composer larastan   # Larastan / PHPStan
-```
-
-The test suite runs via Testbench + in-memory SQLite — no host app required.
-
 ## ⬆️ Upgrading
 
-### Migrations are publish-only (breaking)
+<details>
+<summary>Migrations are publish-only (breaking)</summary>
 
 The service provider no longer calls `loadMigrationsFrom()`. The migrations reach your application
 through the `pbac-migrations` tag only, so schema changes are reviewed in your repository instead of
@@ -295,9 +314,11 @@ the published copies carry generated ones, which Laravel reads as unrun. The nex
 try to create tables that already exist. Reconcile your `migrations` table with the published
 filenames before that run.
 
+</details>
+
 ## 🤝 Contributing
 
-PRs welcome — branch off and target `dev`, see [CONTRIBUTING.md](CONTRIBUTING.md). Conventional Commits required (enforced via commitlint). Husky runs Pint + Larastan + oxlint + oxfmt on `git commit`, so you can mostly forget about style.
+PRs welcome — branch off and target `dev`. Conventional Commits required (enforced via commitlint); husky lints and formats on `git commit`. `composer test` runs the suite via Testbench + in-memory SQLite — no host app required. Setup and the full set of checks: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 > [!TIP]
 > Run `pnpm check:fix` (Node tooling) and `composer pint:fix` (PHP) before pushing — CI will catch what husky missed.
