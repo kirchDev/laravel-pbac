@@ -53,8 +53,12 @@ updates:
     target-branch: 'dev'
     schedule:
       interval: 'monthly'
+    # The cooldown guards against a third party's freshly published release;
+    # the workflow bodies are our own, so they are exempt and land at once.
     cooldown:
       default-days: 3
+      exclude:
+        - 'kirchDev/workflows*'
     labels:
       - 'dependencies'
       - 'stack: github-actions'
