@@ -11,6 +11,9 @@ use KirchDev\Pbac\PbacManager;
  * @method static int|string|null currentOrganisationId()
  * @method static mixed withOrganisation(int|string|null $organisationId, \Closure $callback)
  * @method static mixed withoutOrganisation(\Closure $callback)
+ * @method static mixed withUnredactedTrace(\Closure $callback)
+ * @method static bool isTraceRedacted()
+ * @method static \KirchDev\Pbac\Decision\Decision|null lastDecision()
  * @method static void reset()
  *
  * @see PbacManager
