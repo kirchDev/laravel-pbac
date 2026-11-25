@@ -285,7 +285,7 @@ The host-model side is polymorphic (`model_type` + `model_id`), so no FK enforce
 
 Coming from `spatie/laravel-permission`? See the dedicated guide for schema, API,
 and multi-tenancy differences plus a copy-pasteable data-migration script:
-[docs/migration-from-spatie-laravel-permission.md](docs/migration-from-spatie-laravel-permission.md).
+[docs/1.guides/1.migrate-from-spatie-laravel-permission.md](docs/1.guides/1.migrate-from-spatie-laravel-permission.md).
 
 ## ⬆️ Upgrading
 
